@@ -1,0 +1,261 @@
+import { describe, it, expect } from 'vitest'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { buildPrefixRegex, fileMatchesPrefixFilter } from '../../src/core/prefix-filter.js'
+import type { UpgradeMap } from '../../src/core/types.js'
+
+const UPGRADES_PATH = join(
+  import.meta.dirname,
+  '..',
+  '..',
+  'data',
+  'upgrades.json',
+)
+
+/**
+ * Helper: load the real upgrades.json for integration tests.
+ */
+async function loadRealMap(): Promise<UpgradeMap> {
+  const raw = await readFile(UPGRADES_PATH, 'utf-8')
+  return JSON.parse(raw) as UpgradeMap
+}
+
+describe('buildPrefixRegex', () => {
+  it('derives correct stems from map keys', () => {
+    const map: UpgradeMap = {
+      'gpt-4': { safe: null, major: 'gpt-4.1' },
+      'gpt-4o-2024-05-13': { safe: 'gpt-4o-2024-08-06', major: 'gpt-4.1' },
+      'claude-3-opus-20240229': { safe: null, major: 'claude-opus-4-6' },
+      'openai/gpt-4': { safe: null, major: 'openai/gpt-4.1' },
+      'gemini-pro': { safe: null, major: 'gemini-2.5-pro' },
+      'anthropic.claude-3-opus-20240229-v1:0': {
+        safe: null,
+        major: 'anthropic.claude-opus-4-6-v1:0',
+      },
+      'anthropic/claude-3-opus-20240229': {
+        safe: null,
+        major: 'anthropic/claude-opus-4-6',
+      },
+      'gemini/gemini-1.5-pro': {
+        safe: null,
+        major: 'gemini/gemini-2.5-pro',
+      },
+    }
+
+    const regex = buildPrefixRegex(map)
+    const source = regex.source
+
+    // All expected stems must appear in the regex
+    // Note: RegExp.source escapes forward slashes as \/, so we check escaped forms
+    expect(source).toContain('gpt-')         // from gpt-4, gpt-4o-*
+    expect(source).toContain('claude-')      // from claude-3-*
+    expect(source).toContain('openai\\/')    // from openai/gpt-4
+    expect(source).toContain('gemini-')      // from gemini-pro
+    expect(source).toContain('anthropic\\.') // from anthropic.claude-* (dot escaped)
+    expect(source).toContain('anthropic\\/') // from anthropic/claude-*
+    expect(source).toContain('gemini\\/')    // from gemini/gemini-*
+  })
+
+  it('returns a RegExp that matches lines containing provider stems', () => {
+    const map: UpgradeMap = {
+      'gpt-4': { safe: null, major: 'gpt-4.1' },
+      'claude-3-opus-20240229': { safe: null, major: 'claude-opus-4-6' },
+    }
+
+    const regex = buildPrefixRegex(map)
+
+    expect(regex).toBeInstanceOf(RegExp)
+    expect(regex.test('model = "gpt-4"')).toBe(true)
+    expect(regex.test('const model = "claude-3-opus-20240229"')).toBe(true)
+    // 'openai/gpt-4' still matches because it contains 'gpt-' which is a stem
+    expect(regex.test('openai/gpt-4')).toBe(true)
+    expect(regex.test('no model here')).toBe(false)
+    expect(regex.test('some random text with llama-3')).toBe(false)
+  })
+
+  it('deduplicates stems so each appears only once', () => {
+    const map: UpgradeMap = {
+      'gpt-4': { safe: null, major: 'gpt-4.1' },
+      'gpt-4-0613': { safe: null, major: 'gpt-4.1' },
+      'gpt-4o-2024-05-13': { safe: 'gpt-4o-2024-08-06', major: 'gpt-4.1' },
+      'gpt-3.5-turbo': { safe: null, major: 'gpt-4.1-mini' },
+    }
+
+    const regex = buildPrefixRegex(map)
+    const source = regex.source
+
+    // gpt- should appear in the regex pattern, but only once in the alternatives
+    const alternatives = source.split('|')
+    const gptStems = alternatives.filter((alt) => alt.includes('gpt-'))
+    expect(gptStems).toHaveLength(1)
+  })
+
+  it('handles an empty map gracefully', () => {
+    const map: UpgradeMap = {}
+    const regex = buildPrefixRegex(map)
+
+    // An empty map should produce a regex that matches nothing
+    expect(regex.test('gpt-4')).toBe(false)
+    expect(regex.test('claude-3-opus')).toBe(false)
+    expect(regex.test('')).toBe(false)
+  })
+
+  it('works with actual data/upgrades.json entries', async () => {
+    const map = await loadRealMap()
+    const regex = buildPrefixRegex(map)
+
+    const source = regex.source
+
+    // All expected stems from the real data
+    // Note: RegExp.source escapes forward slashes as \/
+    expect(source).toContain('gpt-')
+    expect(source).toContain('claude-')
+    expect(source).toContain('gemini-')
+    expect(source).toContain('openai\\/')
+    expect(source).toContain('anthropic\\/')
+    expect(source).toContain('anthropic\\.')
+    expect(source).toContain('google\\/')
+    expect(source).toContain('gemini\\/')
+
+    // Regex should match all keys in the map
+    for (const key of Object.keys(map)) {
+      expect(regex.test(key)).toBe(true)
+    }
+  })
+})
+
+describe('fileMatchesPrefixFilter', () => {
+  let regex: RegExp
+
+  // Build regex from a representative map
+  const map: UpgradeMap = {
+    'gpt-4': { safe: null, major: 'gpt-4.1' },
+    'claude-3-opus-20240229': { safe: null, major: 'claude-opus-4-6' },
+    'openai/gpt-4': { safe: null, major: 'openai/gpt-4.1' },
+    'gemini-pro': { safe: null, major: 'gemini-2.5-pro' },
+    'anthropic.claude-3-opus-20240229-v1:0': {
+      safe: null,
+      major: 'anthropic.claude-opus-4-6-v1:0',
+    },
+  }
+
+  it('returns true for files with model stems', () => {
+    regex = buildPrefixRegex(map)
+
+    const pythonFile = `
+import openai
+
+client = openai.Client()
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello"}]
+)
+`
+    expect(fileMatchesPrefixFilter(pythonFile, regex)).toBe(true)
+  })
+
+  it('returns true for files with Claude model references', () => {
+    regex = buildPrefixRegex(map)
+
+    const tsFile = `
+const MODEL = 'claude-3-opus-20240229';
+const response = await anthropic.messages.create({
+  model: MODEL,
+  max_tokens: 1024,
+});
+`
+    expect(fileMatchesPrefixFilter(tsFile, regex)).toBe(true)
+  })
+
+  it('returns true for files with Bedrock-style model references', () => {
+    regex = buildPrefixRegex(map)
+
+    const content = `
+{
+  "modelId": "anthropic.claude-3-opus-20240229-v1:0",
+  "contentType": "application/json"
+}
+`
+    expect(fileMatchesPrefixFilter(content, regex)).toBe(true)
+  })
+
+  it('returns true for files with OpenRouter platform variant', () => {
+    regex = buildPrefixRegex(map)
+
+    const yamlContent = `
+model: openai/gpt-4
+temperature: 0.7
+`
+    expect(fileMatchesPrefixFilter(yamlContent, regex)).toBe(true)
+  })
+
+  it('returns false for files without model stems', () => {
+    regex = buildPrefixRegex(map)
+
+    const plainCode = `
+function add(a: number, b: number): number {
+  return a + b;
+}
+
+const result = add(1, 2);
+console.log(result);
+
+// This is a utility module with no LLM references
+export default { add };
+`
+    expect(fileMatchesPrefixFilter(plainCode, regex)).toBe(false)
+  })
+
+  it('returns false for files with similar but non-matching prefixes', () => {
+    regex = buildPrefixRegex(map)
+
+    const content = `
+// This file discusses GPT concepts (uppercase, no dash)
+// and Claude Shannon's information theory
+// gemstone polishing instructions
+const department = "General Purpose Technology";
+`
+    expect(fileMatchesPrefixFilter(content, regex)).toBe(false)
+  })
+
+  it('returns false for empty content', () => {
+    regex = buildPrefixRegex(map)
+    expect(fileMatchesPrefixFilter('', regex)).toBe(false)
+  })
+
+  it('handles files with multiple model references', () => {
+    regex = buildPrefixRegex(map)
+
+    const multiModelFile = `
+const models = {
+  fast: "gpt-4",
+  smart: "claude-3-opus-20240229",
+  search: "gemini-pro",
+};
+`
+    expect(fileMatchesPrefixFilter(multiModelFile, regex)).toBe(true)
+  })
+
+  it('works with actual upgrades.json data', async () => {
+    const realMap = await loadRealMap()
+    const realRegex = buildPrefixRegex(realMap)
+
+    // File with real model IDs should match
+    const withModels = `
+config:
+  primary_model: "gpt-4o-2024-05-13"
+  fallback_model: "claude-3-5-sonnet-20241022"
+  embedding_model: "gemini/gemini-1.5-pro"
+`
+    expect(fileMatchesPrefixFilter(withModels, realRegex)).toBe(true)
+
+    // File with no model references should not match
+    const noModels = `
+const express = require('express');
+const app = express();
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.listen(3000);
+`
+    expect(fileMatchesPrefixFilter(noModels, realRegex)).toBe(false)
+  })
+})

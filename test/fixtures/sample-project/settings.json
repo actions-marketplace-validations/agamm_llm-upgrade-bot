@@ -1,0 +1,6 @@
+{
+  "ai": {
+    "model": "claude-3-5-sonnet-20240620",
+    "maxTokens": 4096
+  }
+}

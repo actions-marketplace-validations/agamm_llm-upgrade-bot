@@ -1,0 +1,22 @@
+{
+  "gpt-4": { "safe": null, "major": "gpt-4.1" },
+  "gpt-4-0613": { "safe": null, "major": "gpt-4.1" },
+  "gpt-4o-2024-05-13": { "safe": "gpt-4o-2024-08-06", "major": "gpt-4.1" },
+  "gpt-4o-2024-08-06": { "safe": null, "major": "gpt-4.1" },
+  "gpt-4o-mini": { "safe": null, "major": "gpt-4.1-mini" },
+  "gpt-3.5-turbo": { "safe": null, "major": "gpt-4.1-mini" },
+  "claude-3-opus-20240229": { "safe": null, "major": "claude-opus-4-6" },
+  "claude-3-sonnet-20240229": { "safe": null, "major": "claude-sonnet-4-6" },
+  "claude-3-haiku-20240307": { "safe": null, "major": "claude-haiku-4-5-20251001" },
+  "claude-3-5-sonnet-20240620": { "safe": "claude-3-5-sonnet-20241022", "major": "claude-sonnet-4-6" },
+  "claude-3-5-sonnet-20241022": { "safe": null, "major": "claude-sonnet-4-6" },
+  "gemini-pro": { "safe": null, "major": "gemini-2.5-pro" },
+  "gemini-1.5-pro": { "safe": null, "major": "gemini-2.5-pro" },
+  "gemini-1.5-flash": { "safe": null, "major": "gemini-2.5-flash" },
+  "openai/gpt-4": { "safe": null, "major": "openai/gpt-4.1" },
+  "openai/gpt-4o-2024-05-13": { "safe": "openai/gpt-4o-2024-08-06", "major": "openai/gpt-4.1" },
+  "anthropic/claude-3-opus-20240229": { "safe": null, "major": "anthropic/claude-opus-4-6" },
+  "google/gemini-pro": { "safe": null, "major": "google/gemini-2.5-pro" },
+  "anthropic.claude-3-opus-20240229-v1:0": { "safe": null, "major": "anthropic.claude-opus-4-6-v1:0" },
+  "gemini/gemini-1.5-pro": { "safe": null, "major": "gemini/gemini-2.5-pro" }
+}

@@ -1,0 +1,275 @@
+import { describe, it, expect } from 'vitest'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { scanFile } from '../../src/core/scanner.js'
+import type { UpgradeMap } from '../../src/core/types.js'
+
+const FIXTURES_DIR = join(import.meta.dirname, '..', 'fixtures', 'sample-project')
+const UPGRADES_PATH = join(import.meta.dirname, '..', '..', 'data', 'upgrades.json')
+
+/**
+ * Helper: load the real upgrades.json for integration tests.
+ */
+async function loadRealMap(): Promise<UpgradeMap> {
+  const raw = await readFile(UPGRADES_PATH, 'utf-8')
+  return JSON.parse(raw) as UpgradeMap
+}
+
+/** Minimal upgrade map for unit tests */
+const testMap: UpgradeMap = {
+  'gpt-4': { safe: null, major: 'gpt-4.1' },
+  'gpt-4o-2024-05-13': { safe: 'gpt-4o-2024-08-06', major: 'gpt-4.1' },
+  'gpt-3.5-turbo': { safe: null, major: 'gpt-4.1-mini' },
+  'claude-3-opus-20240229': { safe: null, major: 'claude-opus-4-6' },
+  'claude-3-haiku-20240307': { safe: null, major: 'claude-haiku-4-5-20251001' },
+  'claude-3-5-sonnet-20240620': {
+    safe: 'claude-3-5-sonnet-20241022',
+    major: 'claude-sonnet-4-6',
+  },
+  'gemini-pro': { safe: null, major: 'gemini-2.5-pro' },
+}
+
+describe('scanFile', () => {
+  it('finds double-quoted model strings and returns correct line and column', () => {
+    const content = 'const MODEL = "gpt-4o-2024-05-13"\n'
+    const results = scanFile('test.ts', content, testMap)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]).toEqual({
+      file: 'test.ts',
+      line: 1,
+      column: 14,
+      matchedText: 'gpt-4o-2024-05-13',
+      safeUpgrade: 'gpt-4o-2024-08-06',
+      majorUpgrade: 'gpt-4.1',
+    })
+  })
+
+  it('finds single-quoted model strings', () => {
+    const content = "model='gpt-4'\n"
+    const results = scanFile('test.py', content, testMap)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]).toEqual({
+      file: 'test.py',
+      line: 1,
+      column: 6,
+      matchedText: 'gpt-4',
+      safeUpgrade: null,
+      majorUpgrade: 'gpt-4.1',
+    })
+  })
+
+  it('returns safe and major upgrades from the map lookup', () => {
+    const content = 'const m = "claude-3-5-sonnet-20240620"\n'
+    const results = scanFile('test.ts', content, testMap)
+
+    expect(results).toHaveLength(1)
+    const result = results[0]
+    expect(result).toBeDefined()
+    expect(result?.safeUpgrade).toBe('claude-3-5-sonnet-20241022')
+    expect(result?.majorUpgrade).toBe('claude-sonnet-4-6')
+  })
+
+  it('returns empty array for files with no model matches', () => {
+    const content = `
+function add(a: number, b: number): number {
+  return a + b
+}
+`
+    const results = scanFile('utils.ts', content, testMap)
+    expect(results).toEqual([])
+  })
+
+  it('returns empty array when quoted strings exist but none are in the map', () => {
+    const content = 'const name = "Alice"\nconst role = "admin"\n'
+    const results = scanFile('users.ts', content, testMap)
+    expect(results).toEqual([])
+  })
+
+  it('handles multiple matches in one file', () => {
+    const content = `const MODEL = "gpt-4o-2024-05-13"
+const BACKUP = "gpt-3.5-turbo"
+`
+    const results = scanFile('api.ts', content, testMap)
+
+    expect(results).toHaveLength(2)
+    expect(results[0]?.matchedText).toBe('gpt-4o-2024-05-13')
+    expect(results[0]?.line).toBe(1)
+    expect(results[1]?.matchedText).toBe('gpt-3.5-turbo')
+    expect(results[1]?.line).toBe(2)
+  })
+
+  it('handles matches across different quote styles in same file', () => {
+    const content = `model = "gpt-4"
+fallback = 'gemini-pro'
+`
+    const results = scanFile('mixed.py', content, testMap)
+
+    expect(results).toHaveLength(2)
+    expect(results[0]?.matchedText).toBe('gpt-4')
+    expect(results[0]?.column).toBe(8)
+    expect(results[1]?.matchedText).toBe('gemini-pro')
+    expect(results[1]?.column).toBe(11)
+  })
+
+  it('tracks line numbers correctly with multi-line content', () => {
+    const content = `// header comment
+// another comment
+const x = "gpt-4"
+`
+    const results = scanFile('test.ts', content, testMap)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]?.line).toBe(3)
+    expect(results[0]?.column).toBe(10)
+  })
+
+  it('column points to the opening quote character (0-based)', () => {
+    // Verify column is 0-based and points at the opening quote
+    const content = '"gpt-4"\n'
+    const results = scanFile('test.ts', content, testMap)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]?.column).toBe(0)
+  })
+
+  it('finds backtick-quoted model strings (Go raw strings, JS template literals)', () => {
+    const content = 'model := `gpt-4`\n'
+    const results = scanFile('main.go', content, testMap)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]).toEqual({
+      file: 'main.go',
+      line: 1,
+      column: 9,
+      matchedText: 'gpt-4',
+      safeUpgrade: null,
+      majorUpgrade: 'gpt-4.1',
+    })
+  })
+
+  it('finds models across all three quote styles in one file', () => {
+    const content = `model1 = "gpt-4"
+model2 = 'gemini-pro'
+model3 = \`claude-3-opus-20240229\`
+`
+    const results = scanFile('mixed.go', content, testMap)
+
+    expect(results).toHaveLength(3)
+    const texts = results.map((r) => r.matchedText).sort()
+    expect(texts).toEqual(['claude-3-opus-20240229', 'gemini-pro', 'gpt-4'])
+  })
+})
+
+describe('scanFile with fixture files', () => {
+  it('finds correct matches in api.ts', async () => {
+    const content = await readFile(join(FIXTURES_DIR, 'api.ts'), 'utf-8')
+    const map = await loadRealMap()
+    const results = scanFile('api.ts', content, map)
+
+    expect(results).toHaveLength(2)
+
+    // Line 1: "gpt-4o-2024-05-13"
+    expect(results[0]).toEqual({
+      file: 'api.ts',
+      line: 1,
+      column: 14,
+      matchedText: 'gpt-4o-2024-05-13',
+      safeUpgrade: 'gpt-4o-2024-08-06',
+      majorUpgrade: 'gpt-4.1',
+    })
+
+    // Line 2: "gpt-3.5-turbo"
+    expect(results[1]).toEqual({
+      file: 'api.ts',
+      line: 2,
+      column: 21,
+      matchedText: 'gpt-3.5-turbo',
+      safeUpgrade: null,
+      majorUpgrade: 'gpt-4.1-mini',
+    })
+  })
+
+  it('finds correct matches in config.yaml', async () => {
+    const content = await readFile(join(FIXTURES_DIR, 'config.yaml'), 'utf-8')
+    const map = await loadRealMap()
+    const results = scanFile('config.yaml', content, map)
+
+    expect(results).toHaveLength(2)
+
+    // Line 3: "claude-3-opus-20240229"
+    expect(results[0]).toEqual({
+      file: 'config.yaml',
+      line: 3,
+      column: 9,
+      matchedText: 'claude-3-opus-20240229',
+      safeUpgrade: null,
+      majorUpgrade: 'claude-opus-4-6',
+    })
+
+    // Line 4: "claude-3-haiku-20240307"
+    expect(results[1]).toEqual({
+      file: 'config.yaml',
+      line: 4,
+      column: 12,
+      matchedText: 'claude-3-haiku-20240307',
+      safeUpgrade: null,
+      majorUpgrade: 'claude-haiku-4-5-20251001',
+    })
+  })
+
+  it('finds correct matches in app.py (single-quoted strings)', async () => {
+    const content = await readFile(join(FIXTURES_DIR, 'app.py'), 'utf-8')
+    const map = await loadRealMap()
+    const results = scanFile('app.py', content, map)
+
+    // Should find 'gpt-4' on line 6 and 'gemini-pro' on line 11
+    // Also picks up double-quoted strings but "role", "user", "content", "Hello" are not in map
+    expect(results).toHaveLength(2)
+
+    expect(results[0]).toEqual({
+      file: 'app.py',
+      line: 6,
+      column: 10,
+      matchedText: 'gpt-4',
+      safeUpgrade: null,
+      majorUpgrade: 'gpt-4.1',
+    })
+
+    expect(results[1]).toEqual({
+      file: 'app.py',
+      line: 11,
+      column: 10,
+      matchedText: 'gemini-pro',
+      safeUpgrade: null,
+      majorUpgrade: 'gemini-2.5-pro',
+    })
+  })
+
+  it('finds correct matches in settings.json', async () => {
+    const content = await readFile(join(FIXTURES_DIR, 'settings.json'), 'utf-8')
+    const map = await loadRealMap()
+    const results = scanFile('settings.json', content, map)
+
+    // Only "claude-3-5-sonnet-20240620" is in the map; "ai", "model", "maxTokens" are not
+    expect(results).toHaveLength(1)
+
+    expect(results[0]).toEqual({
+      file: 'settings.json',
+      line: 3,
+      column: 13,
+      matchedText: 'claude-3-5-sonnet-20240620',
+      safeUpgrade: 'claude-3-5-sonnet-20241022',
+      majorUpgrade: 'claude-sonnet-4-6',
+    })
+  })
+
+  it('returns empty array for clean.ts (no model strings)', async () => {
+    const content = await readFile(join(FIXTURES_DIR, 'clean.ts'), 'utf-8')
+    const map = await loadRealMap()
+    const results = scanFile('clean.ts', content, map)
+
+    expect(results).toEqual([])
+  })
+})
