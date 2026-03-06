@@ -1,5 +1,6 @@
 import { Command } from 'commander'
 import { resolve } from 'node:path'
+import { performance } from 'node:perf_hooks'
 import { loadUpgradeMap } from '../core/upgrade-map.js'
 import { scanDirectory } from '../core/directory-scanner.js'
 import { computeEdits, applyFixes } from '../core/fixer.js'
@@ -39,7 +40,9 @@ async function runScan(
   }
 
   const upgradeMap = mapResult.data
+  const start = performance.now()
   const report = await scanDirectory(dir, upgradeMap)
+  const durationMs = Math.round(performance.now() - start)
 
   if (options.json) {
     process.stdout.write(JSON.stringify(report, null, 2) + '\n')
@@ -59,7 +62,7 @@ async function runScan(
   }
 
   // Default: scan report
-  process.stdout.write(formatScanReport(report))
+  process.stdout.write(formatScanReport(report, durationMs))
   process.exit(report.matches.length > 0 ? 1 : 0)
 }
 

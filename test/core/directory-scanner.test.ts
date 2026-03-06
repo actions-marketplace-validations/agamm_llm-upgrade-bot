@@ -67,16 +67,9 @@ describe('scanDirectory', () => {
     expect(report).toHaveProperty('totalFiles')
     expect(report).toHaveProperty('scannedFiles')
     expect(report).toHaveProperty('matches')
-    expect(report).toHaveProperty('duration')
     expect(typeof report.totalFiles).toBe('number')
     expect(typeof report.scannedFiles).toBe('number')
     expect(Array.isArray(report.matches)).toBe(true)
-    expect(typeof report.duration).toBe('number')
-  })
-
-  it('returns positive duration measured in milliseconds', async () => {
-    const report = await scanDirectory(FIXTURES_DIR, testMap)
-    expect(report.duration).toBeGreaterThan(0)
   })
 
   it('filters files by supported extension list', async () => {
@@ -190,7 +183,6 @@ describe('scanDirectory edge cases', () => {
     expect(report.totalFiles).toBe(0)
     expect(report.scannedFiles).toBe(0)
     expect(report.matches).toEqual([])
-    expect(report.duration).toBeGreaterThanOrEqual(0)
   })
 
   it('returns empty report for an empty directory', async () => {

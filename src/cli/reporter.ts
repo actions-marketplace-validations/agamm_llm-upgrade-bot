@@ -30,7 +30,7 @@ function formatMatch(match: ScanResult): string {
  * Format a full scan report for terminal output.
  * Includes each match and a summary line.
  */
-export function formatScanReport(report: ScanReport): string {
+export function formatScanReport(report: ScanReport, durationMs: number): string {
   const lines: string[] = []
 
   for (const match of report.matches) {
@@ -42,9 +42,8 @@ export function formatScanReport(report: ScanReport): string {
   const modelWord = count === 1 ? 'model' : 'models'
   const fileCount = new Set(report.matches.map((m) => m.file)).size
   const fileWord = fileCount === 1 ? 'file' : 'files'
-  const ms = Math.round(report.duration)
 
-  const summary = `Found ${String(count)} upgradable ${modelWord} in ${String(fileCount)} ${fileWord} (scanned ${String(report.scannedFiles)}/${String(report.totalFiles)} files in ${String(ms)}ms)`
+  const summary = `Found ${String(count)} upgradable ${modelWord} in ${String(fileCount)} ${fileWord} (scanned ${String(report.scannedFiles)}/${String(report.totalFiles)} files in ${String(durationMs)}ms)`
 
   lines.push(pc.bold(summary))
   return lines.join('\n') + '\n'

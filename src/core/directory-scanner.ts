@@ -1,7 +1,6 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join, extname, relative } from 'node:path'
 import { execSync } from 'node:child_process'
-import { performance } from 'node:perf_hooks'
 import type { UpgradeMap, ScanReport, ScanResult } from './types.js'
 import { buildPrefixRegex, fileMatchesPrefixFilter } from './prefix-filter.js'
 import { scanFile } from './scanner.js'
@@ -164,9 +163,8 @@ export async function scanDirectory(
   dir: string,
   upgradeMap: UpgradeMap,
 ): Promise<ScanReport> {
-  const start = performance.now()
   const empty: ScanReport = {
-    totalFiles: 0, scannedFiles: 0, matches: [], duration: 0,
+    totalFiles: 0, scannedFiles: 0, matches: [],
   }
 
   if (!(await directoryExists(dir))) return empty
@@ -176,9 +174,6 @@ export async function scanDirectory(
   const { scannedFiles, matches } = await twoPassScan(
     dir, supportedFiles, upgradeMap, prefixRegex,
   )
-  const duration = performance.now() - start
 
-  return {
-    totalFiles: supportedFiles.length, scannedFiles, matches, duration,
-  }
+  return { totalFiles: supportedFiles.length, scannedFiles, matches }
 }

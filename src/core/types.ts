@@ -18,7 +18,6 @@ export interface ScanReport {
   totalFiles: number
   scannedFiles: number
   matches: ScanResult[]
-  duration: number
 }
 
 export interface FileEdit {
