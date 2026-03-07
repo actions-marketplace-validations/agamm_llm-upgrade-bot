@@ -98,11 +98,35 @@
   "deepseek-coder": { "safe": null, "major": "deepseek-chat" },
   "deepseek-chat": { "safe": null, "major": "deepseek-v3.2" },
   "deepseek-reasoner": { "safe": null, "major": "deepseek-v3.2" },
+  "deepseek-r1": { "safe": null, "major": "deepseek-v3.2" },
 
   "grok-2": { "safe": null, "major": "grok-3" },
   "grok-2-vision-latest": { "safe": null, "major": "grok-3" },
   "grok-3": { "safe": null, "major": "grok-4-0709" },
   "grok-3-mini": { "safe": null, "major": "grok-4-0709" },
+  "grok-3-beta": { "safe": null, "major": "grok-4-0709" },
+  "grok-3-mini-beta": { "safe": null, "major": "grok-4-0709" },
+
+  "kimi-k2": { "safe": null, "major": "kimi-k2.5" },
+  "kimi-k2-0905": { "safe": null, "major": "kimi-k2.5" },
+
+  "MiniMax-Text-01": { "safe": null, "major": "MiniMax-M2.5" },
+  "minimax-m1": { "safe": null, "major": "MiniMax-M2.5" },
+  "minimax-m2": { "safe": "minimax-m2-1", "major": "MiniMax-M2.5" },
+  "minimax-m2-1": { "safe": null, "major": "MiniMax-M2.5" },
+
+  "command-r": { "safe": null, "major": "command-a-03-2025" },
+  "command-r-08-2024": { "safe": null, "major": "command-a-03-2025" },
+  "command-r-plus": { "safe": null, "major": "command-a-03-2025" },
+  "command-r-plus-08-2024": { "safe": null, "major": "command-a-03-2025" },
+  "command-r7b-12-2024": { "safe": null, "major": "command-a-03-2025" },
+
+  "qwen-max": { "safe": null, "major": "qwen3-max" },
+  "qwen-plus": { "safe": null, "major": "qwen3-coder-plus" },
+  "qwen-turbo": { "safe": null, "major": "qwen3-max" },
+  "qwen2.5-72b-instruct": { "safe": null, "major": "qwen3-max" },
+  "qwen2.5-32b-instruct": { "safe": null, "major": "qwen3-max" },
+  "qwen2.5-coder-32b-instruct": { "safe": null, "major": "qwen3-coder-plus" },
 
   "openai/gpt-3.5-turbo": { "safe": null, "major": "openai/gpt-4.1-mini" },
   "openai/gpt-4": { "safe": null, "major": "openai/gpt-4.1" },
@@ -160,6 +184,22 @@
   "x-ai/grok-2": { "safe": null, "major": "x-ai/grok-3" },
   "x-ai/grok-3": { "safe": null, "major": "x-ai/grok-4-0709" },
   "x-ai/grok-3-mini": { "safe": null, "major": "x-ai/grok-4-0709" },
+  "x-ai/grok-3-beta": { "safe": null, "major": "x-ai/grok-4-0709" },
+  "x-ai/grok-3-mini-beta": { "safe": null, "major": "x-ai/grok-4-0709" },
+
+  "moonshotai/kimi-k2": { "safe": null, "major": "moonshotai/kimi-k2.5" },
+  "moonshotai/kimi-k2-0905": { "safe": null, "major": "moonshotai/kimi-k2.5" },
+
+  "qwen/qwen-max": { "safe": null, "major": "qwen/qwen3-max" },
+  "qwen/qwen-plus": { "safe": null, "major": "qwen/qwen3-coder-plus" },
+  "qwen/qwen-turbo": { "safe": null, "major": "qwen/qwen3-max" },
+  "qwen/qwen2.5-72b-instruct": { "safe": null, "major": "qwen/qwen3-max" },
+  "qwen/qwen2.5-coder-32b-instruct": { "safe": null, "major": "qwen/qwen3-coder-plus" },
+
+  "cohere/command-r": { "safe": null, "major": "cohere/command-a-03-2025" },
+  "cohere/command-r-plus": { "safe": null, "major": "cohere/command-a-03-2025" },
+  "cohere/command-r-08-2024": { "safe": null, "major": "cohere/command-a-03-2025" },
+  "cohere/command-r-plus-08-2024": { "safe": null, "major": "cohere/command-a-03-2025" },
 
   "anthropic.claude-3-opus-20240229-v1:0": { "safe": null, "major": "anthropic.claude-opus-4-6-v1:0" },
   "anthropic.claude-3-sonnet-20240229-v1:0": { "safe": null, "major": "anthropic.claude-sonnet-4-6-v1:0" },
