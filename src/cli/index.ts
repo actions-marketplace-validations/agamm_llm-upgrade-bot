@@ -7,6 +7,7 @@ import { computeEdits, applyFixes } from '../core/fixer.js'
 import {
   formatScanReport,
   formatFixReport,
+  formatPrBody,
   buildFixEdits,
 } from './reporter.js'
 
@@ -23,14 +24,15 @@ program
   .argument('[directory]', 'directory to scan', '.')
   .option('--fix', 'auto-apply upgrades to files')
   .option('--json', 'output results as JSON')
-  .action(async (directory: string, options: { fix?: boolean; json?: boolean }) => {
+  .option('--pr-body', 'output markdown PR body for upgrade matches')
+  .action(async (directory: string, options: { fix?: boolean; json?: boolean; prBody?: boolean }) => {
     const dir = resolve(directory)
     await runScan(dir, options)
   })
 
 async function runScan(
   dir: string,
-  options: { fix?: boolean; json?: boolean },
+  options: { fix?: boolean; json?: boolean; prBody?: boolean },
 ): Promise<void> {
   const mapResult = await loadUpgradeMap()
   if (!mapResult.ok) {
@@ -46,6 +48,12 @@ async function runScan(
 
   if (options.json) {
     process.stdout.write(JSON.stringify(report, null, 2) + '\n')
+    process.exit(report.matches.length > 0 ? 1 : 0)
+    return
+  }
+
+  if (options.prBody) {
+    process.stdout.write(formatPrBody(report))
     process.exit(report.matches.length > 0 ? 1 : 0)
     return
   }

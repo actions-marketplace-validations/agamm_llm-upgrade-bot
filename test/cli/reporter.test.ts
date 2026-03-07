@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   formatScanReport,
   formatFixReport,
+  formatPrBody,
   buildFixEdits,
 } from '../../src/cli/reporter.js'
 import type { ScanReport, ScanResult } from '../../src/core/types.js'
@@ -97,6 +98,83 @@ describe('formatScanReport', () => {
     }
     const output = formatScanReport(report, 123)
     expect(output).toContain('123ms')
+  })
+})
+
+describe('formatPrBody', () => {
+  it('outputs markdown table with correct columns', () => {
+    const report: ScanReport = {
+      totalFiles: 10,
+      scannedFiles: 3,
+      matches: [
+        {
+          file: 'api.ts', line: 5, column: 14,
+          matchedText: 'gpt-4', safeUpgrade: null, majorUpgrade: 'gpt-4.1',
+        },
+      ],
+    }
+
+    const output = formatPrBody(report)
+    expect(output).toContain('## LLM Model Upgrades')
+    expect(output).toContain('| File | Line | Model | Upgrade | Tier |')
+    expect(output).toContain('| `api.ts` | 5 | `gpt-4` | `gpt-4.1` | major |')
+  })
+
+  it('shows safe tier when safe upgrade exists', () => {
+    const report: ScanReport = {
+      totalFiles: 1,
+      scannedFiles: 1,
+      matches: [
+        {
+          file: 'a.ts', line: 1, column: 0,
+          matchedText: 'gpt-4o-2024-05-13',
+          safeUpgrade: 'gpt-4o-2024-11-20',
+          majorUpgrade: 'gpt-4.1',
+        },
+      ],
+    }
+
+    const output = formatPrBody(report)
+    expect(output).toContain('`gpt-4o-2024-11-20`')
+    expect(output).toContain('| safe |')
+  })
+
+  it('handles multiple matches across files', () => {
+    const report: ScanReport = {
+      totalFiles: 5,
+      scannedFiles: 3,
+      matches: [
+        {
+          file: 'a.ts', line: 1, column: 0,
+          matchedText: 'gpt-4', safeUpgrade: null, majorUpgrade: 'gpt-4.1',
+        },
+        {
+          file: 'b.ts', line: 10, column: 0,
+          matchedText: 'gemini-pro', safeUpgrade: null, majorUpgrade: 'gemini-2.5-pro',
+        },
+      ],
+    }
+
+    const output = formatPrBody(report)
+    expect(output).toContain('| `a.ts` |')
+    expect(output).toContain('| `b.ts` |')
+    expect(output).toContain('**2 upgrades across 2 files**')
+  })
+
+  it('pluralizes correctly for single match', () => {
+    const report: ScanReport = {
+      totalFiles: 1,
+      scannedFiles: 1,
+      matches: [
+        {
+          file: 'a.ts', line: 1, column: 0,
+          matchedText: 'gpt-4', safeUpgrade: null, majorUpgrade: 'gpt-4.1',
+        },
+      ],
+    }
+
+    const output = formatPrBody(report)
+    expect(output).toContain('**1 upgrade across 1 file**')
   })
 })
 

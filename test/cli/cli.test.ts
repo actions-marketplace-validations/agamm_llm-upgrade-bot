@@ -192,6 +192,45 @@ describe('CLI --json mode', () => {
   })
 })
 
+// ─── PR Body Mode ───────────────────────────────────────────────────────────
+
+describe('CLI --pr-body mode', () => {
+  it('outputs markdown table with upgrade info and exits code 1', () => {
+    const { stdout, exitCode } = runCli([FIXTURE_DIR, '--pr-body'], {
+      expectFail: true,
+    })
+
+    expect(exitCode).toBe(1)
+    expect(stdout).toContain('## LLM Model Upgrades')
+    expect(stdout).toContain('| File | Line | Model | Upgrade | Tier |')
+    expect(stdout).toContain('api.ts')
+    expect(stdout).toMatch(/\*\*\d+ upgrades? across \d+ files?\*\*/)
+  })
+
+  it('contains no ANSI color codes', () => {
+    const { stdout } = runCli([FIXTURE_DIR, '--pr-body'], { expectFail: true })
+
+    // eslint-disable-next-line no-control-regex
+    expect(stdout).not.toMatch(/\x1b\[/)
+  })
+
+  it('exits 0 for clean directory', async () => {
+    const emptyDir = await mkdtemp(join(tmpdir(), 'cli-pr-body-clean-'))
+    const { writeFile: wf } = await import('node:fs/promises')
+    await wf(join(emptyDir, 'clean.ts'), 'export const x = 42\n', 'utf-8')
+
+    try {
+      const { stdout, exitCode } = runCli([emptyDir, '--pr-body'])
+
+      expect(exitCode).toBe(0)
+      expect(stdout).toContain('## LLM Model Upgrades')
+      expect(stdout).toContain('**0 upgrades across 0 files**')
+    } finally {
+      await rm(emptyDir, { recursive: true, force: true })
+    }
+  })
+})
+
 // ─── Fix Mode ────────────────────────────────────────────────────────────────
 
 describe('CLI --fix mode', () => {

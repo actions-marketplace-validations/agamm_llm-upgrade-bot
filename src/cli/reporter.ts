@@ -49,6 +49,33 @@ export function formatScanReport(report: ScanReport, durationMs: number): string
   return lines.join('\n') + '\n'
 }
 
+/**
+ * Format a markdown PR body from scan matches.
+ * Used by `--pr-body` flag and the GitHub Action.
+ */
+export function formatPrBody(report: ScanReport): string {
+  const lines: string[] = ['## LLM Model Upgrades', '']
+  lines.push('| File | Line | Model | Upgrade | Tier |')
+  lines.push('|------|------|-------|---------|------|')
+
+  for (const m of report.matches) {
+    const upgrade = m.safeUpgrade ?? m.majorUpgrade ?? '—'
+    const tier = m.safeUpgrade ? 'safe' : m.majorUpgrade ? 'major' : '—'
+    lines.push(
+      `| \`${m.file}\` | ${String(m.line)} | \`${m.matchedText}\` | \`${upgrade}\` | ${tier} |`,
+    )
+  }
+
+  lines.push('')
+  const count = report.matches.length
+  const upgradeWord = count === 1 ? 'upgrade' : 'upgrades'
+  const fileCount = new Set(report.matches.map((m) => m.file)).size
+  const fileWord = fileCount === 1 ? 'file' : 'files'
+  lines.push(`**${String(count)} ${upgradeWord} across ${String(fileCount)} ${fileWord}**`)
+
+  return lines.join('\n') + '\n'
+}
+
 interface FixResult {
   applied: number
   files: string[]

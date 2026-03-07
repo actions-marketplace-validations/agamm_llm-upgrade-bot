@@ -1,0 +1,90 @@
+name: 'LLM Upgrade Bot'
+description: 'Scan for outdated LLM model strings and create a PR with upgrades'
+
+inputs:
+  token:
+    description: 'GitHub token with contents:write and pull-requests:write permissions'
+    required: false
+    default: ${{ github.token }}
+  directory:
+    description: 'Directory to scan (relative to repo root)'
+    required: false
+    default: '.'
+  base-branch:
+    description: 'Base branch for the PR'
+    required: false
+    default: 'main'
+
+outputs:
+  pr-url:
+    description: 'URL of the created pull request (empty if none created)'
+    value: ${{ steps.create-pr.outputs.pull-request-url }}
+  upgrades-found:
+    description: 'Whether upgradable models were found (true/false)'
+    value: ${{ steps.scan.outputs.upgrades-found }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Scan for outdated models
+      id: scan
+      shell: bash
+      run: |
+        set +e
+        node "${{ github.action_path }}/dist/cli.js" "${{ inputs.directory }}" > /dev/null 2>&1
+        exit_code=$?
+        set -e
+        if [ "$exit_code" -eq 1 ]; then
+          echo "upgrades-found=true" >> "$GITHUB_OUTPUT"
+        elif [ "$exit_code" -eq 0 ]; then
+          echo "upgrades-found=false" >> "$GITHUB_OUTPUT"
+          echo "No outdated models found."
+        else
+          echo "::error::Scan failed with exit code $exit_code"
+          exit "$exit_code"
+        fi
+
+    - name: Check for existing PR
+      if: steps.scan.outputs.upgrades-found == 'true'
+      id: dedup
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        prs=$(gh pr list --head "llm-upgrade-bot/upgrades" --state all --json state,mergedAt --jq '[.[] | select(.state == "OPEN" or (.state == "CLOSED" and .mergedAt == null))] | length')
+        if [ "$prs" -gt 0 ]; then
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+          echo "Existing open or rejected PR found. Skipping."
+        else
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Generate PR body
+      if: steps.scan.outputs.upgrades-found == 'true' && steps.dedup.outputs.skip != 'true'
+      id: pr-body
+      shell: bash
+      run: |
+        body=$(node "${{ github.action_path }}/dist/cli.js" "${{ inputs.directory }}" --pr-body)
+        {
+          echo "body<<PREOF"
+          echo "$body"
+          echo "PREOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Apply fixes
+      if: steps.scan.outputs.upgrades-found == 'true' && steps.dedup.outputs.skip != 'true'
+      shell: bash
+      run: node "${{ github.action_path }}/dist/cli.js" "${{ inputs.directory }}" --fix
+
+    - name: Create Pull Request
+      if: steps.scan.outputs.upgrades-found == 'true' && steps.dedup.outputs.skip != 'true'
+      id: create-pr
+      uses: peter-evans/create-pull-request@v8
+      with:
+        token: ${{ inputs.token }}
+        branch: llm-upgrade-bot/upgrades
+        base: ${{ inputs.base-branch }}
+        title: 'chore: upgrade outdated LLM model strings'
+        body: ${{ steps.pr-body.outputs.body }}
+        commit-message: 'chore: upgrade outdated LLM model strings'
+        delete-branch: true
