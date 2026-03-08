@@ -15,3 +15,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: LLM Upgrade Bot
         uses: agamm/llm-upgrade-bot@v1
+        with:
+          include: 'README.md'

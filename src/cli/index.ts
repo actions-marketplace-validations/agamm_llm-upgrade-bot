@@ -26,7 +26,8 @@ program
   .option('--json', 'output results as JSON')
   .option('--pr-body', 'output markdown PR body for upgrade matches')
   .option('--extensions <exts>', 'extra file extensions to scan (comma-separated, e.g. ".txt,.cfg")')
-  .action(async (directory: string, options: { fix?: boolean; json?: boolean; prBody?: boolean; extensions?: string }) => {
+  .option('--include <globs>', 'only scan files matching these globs (comma-separated, e.g. "README.md,src/**")')
+  .action(async (directory: string, options: { fix?: boolean; json?: boolean; prBody?: boolean; extensions?: string; include?: string }) => {
     const dir = resolve(directory)
     await runScan(dir, options)
   })
@@ -38,9 +39,14 @@ function parseExtensions(raw?: string): string[] {
   )
 }
 
+function parseInclude(raw?: string): string[] {
+  if (!raw) return []
+  return raw.split(',').map((g) => g.trim()).filter(Boolean)
+}
+
 async function runScan(
   dir: string,
-  options: { fix?: boolean; json?: boolean; prBody?: boolean; extensions?: string },
+  options: { fix?: boolean; json?: boolean; prBody?: boolean; extensions?: string; include?: string },
 ): Promise<void> {
   const mapResult = await loadUpgradeMap()
   if (!mapResult.ok) {
@@ -51,8 +57,9 @@ async function runScan(
 
   const upgradeMap = mapResult.data
   const extraExtensions = parseExtensions(options.extensions)
+  const includeGlobs = parseInclude(options.include)
   const start = performance.now()
-  const report = await scanDirectory(dir, upgradeMap, { extraExtensions })
+  const report = await scanDirectory(dir, upgradeMap, { extraExtensions, includeGlobs })
   const durationMs = Math.round(performance.now() - start)
 
   if (options.json) {

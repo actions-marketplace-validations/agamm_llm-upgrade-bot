@@ -1,5 +1,5 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
-import { join, extname, relative } from 'node:path'
+import { join, extname, relative, basename } from 'node:path'
 import { execSync } from 'node:child_process'
 import type { UpgradeMap, ScanReport, ScanResult } from './types.js'
 import { buildPrefixRegex, fileMatchesPrefixFilter } from './prefix-filter.js'
@@ -40,6 +40,7 @@ const IGNORED_DIRS = new Set([
 
 export interface ScanOptions {
   extraExtensions?: string[]
+  includeGlobs?: string[]
 }
 
 /**
@@ -117,6 +118,23 @@ async function directoryExists(dir: string): Promise<boolean> {
 }
 
 /**
+ * Simple glob matcher supporting * and ** wildcards.
+ * Matches against both the full relative path and the basename.
+ */
+function matchGlob(filePath: string, pattern: string): boolean {
+  const regex = new RegExp(
+    '^' +
+      pattern
+        .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*\*/g, '{{GLOBSTAR}}')
+        .replace(/\*/g, '[^/]*')
+        .replace(/{{GLOBSTAR}}/g, '.*') +
+      '$',
+  )
+  return regex.test(filePath) || regex.test(basename(filePath))
+}
+
+/**
  * List supported files in a directory using git or fallback walk.
  */
 async function listSupportedFiles(
@@ -184,7 +202,14 @@ export async function scanDirectory(
   if (!(await directoryExists(dir))) return empty
 
   const extra = options?.extraExtensions ?? []
-  const supportedFiles = await listSupportedFiles(dir, extra)
+  const includeGlobs = options?.includeGlobs ?? []
+  let supportedFiles = await listSupportedFiles(dir, extra)
+
+  if (includeGlobs.length > 0) {
+    supportedFiles = supportedFiles.filter((f) =>
+      includeGlobs.some((g) => matchGlob(f, g)),
+    )
+  }
   const prefixRegex = buildPrefixRegex(upgradeMap)
   const { scannedFiles, matches } = await twoPassScan(
     dir, supportedFiles, upgradeMap, prefixRegex,

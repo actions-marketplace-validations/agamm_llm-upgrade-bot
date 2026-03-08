@@ -73,6 +73,7 @@ declare function scanFile(filePath: string, content: string, upgradeMap: Upgrade
 declare const SUPPORTED_EXTENSIONS: readonly string[];
 interface ScanOptions {
     extraExtensions?: string[];
+    includeGlobs?: string[];
 }
 /**
  * Scan a directory for hardcoded LLM model strings using a two-pass strategy:

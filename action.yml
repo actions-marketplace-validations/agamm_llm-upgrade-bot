@@ -21,6 +21,10 @@ inputs:
     description: 'Extra file extensions to scan (comma-separated, e.g. ".txt,.cfg")'
     required: false
     default: ''
+  include:
+    description: 'Only scan files matching these globs (comma-separated, e.g. "README.md,src/**")'
+    required: false
+    default: ''
 
 outputs:
   pr-url:
@@ -39,10 +43,14 @@ runs:
       run: |
         set +e
         ext_flag=""
+        inc_flag=""
         if [ -n "${{ inputs.extensions }}" ]; then
           ext_flag="--extensions ${{ inputs.extensions }}"
         fi
-        node "${{ github.action_path }}/dist/cli.js" "${{ inputs.directory }}" $ext_flag > /dev/null 2>&1
+        if [ -n "${{ inputs.include }}" ]; then
+          inc_flag="--include ${{ inputs.include }}"
+        fi
+        node "${{ github.action_path }}/dist/cli.js" "${{ inputs.directory }}" $ext_flag $inc_flag > /dev/null 2>&1
         exit_code=$?
         set -e
         if [ "$exit_code" -eq 1 ]; then
@@ -76,10 +84,14 @@ runs:
       shell: bash
       run: |
         ext_flag=""
+        inc_flag=""
         if [ -n "${{ inputs.extensions }}" ]; then
           ext_flag="--extensions ${{ inputs.extensions }}"
         fi
-        body=$(node "${{ github.action_path }}/dist/cli.js" "${{ inputs.directory }}" --pr-body $ext_flag)
+        if [ -n "${{ inputs.include }}" ]; then
+          inc_flag="--include ${{ inputs.include }}"
+        fi
+        body=$(node "${{ github.action_path }}/dist/cli.js" "${{ inputs.directory }}" --pr-body $ext_flag $inc_flag)
         {
           echo "body<<PREOF"
           echo "$body"
@@ -91,10 +103,14 @@ runs:
       shell: bash
       run: |
         ext_flag=""
+        inc_flag=""
         if [ -n "${{ inputs.extensions }}" ]; then
           ext_flag="--extensions ${{ inputs.extensions }}"
         fi
-        node "${{ github.action_path }}/dist/cli.js" "${{ inputs.directory }}" --fix $ext_flag
+        if [ -n "${{ inputs.include }}" ]; then
+          inc_flag="--include ${{ inputs.include }}"
+        fi
+        node "${{ github.action_path }}/dist/cli.js" "${{ inputs.directory }}" --fix $ext_flag $inc_flag
 
     - name: Create Pull Request
       if: steps.scan.outputs.upgrades-found == 'true' && steps.dedup.outputs.skip != 'true'

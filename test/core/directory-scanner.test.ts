@@ -312,6 +312,46 @@ describe('scanDirectory edge cases', () => {
     }
   })
 
+  it('filters files by includeGlobs option', async () => {
+    const report = await scanDirectory(FIXTURES_DIR, testMap, {
+      includeGlobs: ['api.ts'],
+    })
+
+    expect(report.totalFiles).toBe(1)
+    expect(report.matches.length).toBeGreaterThan(0)
+    expect(report.matches.every((m) => m.file === 'api.ts')).toBe(true)
+  })
+
+  it('includeGlobs supports ** wildcard for nested paths', async () => {
+    const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+
+    const tempDir = await mkdtemp(join(tmpdir(), 'llm-scan-glob-'))
+    try {
+      await mkdir(join(tempDir, 'src'), { recursive: true })
+      await writeFile(join(tempDir, 'src', 'api.ts'), 'const M = "gpt-4"\n')
+      await writeFile(join(tempDir, 'root.ts'), 'const M = "gpt-4"\n')
+
+      const report = await scanDirectory(tempDir, testMap, {
+        includeGlobs: ['src/**'],
+      })
+
+      expect(report.totalFiles).toBe(1)
+      expect(report.matches.every((m) => m.file.startsWith('src/'))).toBe(true)
+    } finally {
+      await rm(tempDir, { recursive: true })
+    }
+  })
+
+  it('includeGlobs with no matches returns empty report', async () => {
+    const report = await scanDirectory(FIXTURES_DIR, testMap, {
+      includeGlobs: ['nonexistent.xyz'],
+    })
+
+    expect(report.totalFiles).toBe(0)
+    expect(report.matches).toEqual([])
+  })
+
   it('file paths in matches are relative to the scanned directory', async () => {
     const map = await loadRealMap()
     const report = await scanDirectory(FIXTURES_DIR, map)

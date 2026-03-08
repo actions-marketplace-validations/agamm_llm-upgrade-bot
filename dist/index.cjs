@@ -333,6 +333,12 @@ async function directoryExists(dir) {
     return false;
   }
 }
+function matchGlob(filePath, pattern) {
+  const regex = new RegExp(
+    "^" + pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*\*/g, "{{GLOBSTAR}}").replace(/\*/g, "[^/]*").replace(/{{GLOBSTAR}}/g, ".*") + "$"
+  );
+  return regex.test(filePath) || regex.test((0, import_node_path2.basename)(filePath));
+}
 async function listSupportedFiles(dir, extra = []) {
   const allFiles = tryGitLsFiles(dir) ?? await walkDirectory(dir, dir);
   return allFiles.filter((f) => hasSupportedExtension(f, extra));
@@ -364,7 +370,13 @@ async function scanDirectory(dir, upgradeMap, options) {
   };
   if (!await directoryExists(dir)) return empty;
   const extra = options?.extraExtensions ?? [];
-  const supportedFiles = await listSupportedFiles(dir, extra);
+  const includeGlobs = options?.includeGlobs ?? [];
+  let supportedFiles = await listSupportedFiles(dir, extra);
+  if (includeGlobs.length > 0) {
+    supportedFiles = supportedFiles.filter(
+      (f) => includeGlobs.some((g) => matchGlob(f, g))
+    );
+  }
   const prefixRegex = buildPrefixRegex(upgradeMap);
   const { scannedFiles, matches } = await twoPassScan(
     dir,

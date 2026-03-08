@@ -3632,7 +3632,7 @@ async function loadUpgradeMap(options) {
 
 // src/core/directory-scanner.ts
 import { readFile as readFile2, readdir, stat } from "fs/promises";
-import { join as join2, extname, relative } from "path";
+import { join as join2, extname, relative, basename } from "path";
 import { execSync } from "child_process";
 
 // src/core/prefix-filter.ts
@@ -3847,6 +3847,12 @@ async function directoryExists(dir) {
     return false;
   }
 }
+function matchGlob(filePath, pattern) {
+  const regex = new RegExp(
+    "^" + pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*\*/g, "{{GLOBSTAR}}").replace(/\*/g, "[^/]*").replace(/{{GLOBSTAR}}/g, ".*") + "$"
+  );
+  return regex.test(filePath) || regex.test(basename(filePath));
+}
 async function listSupportedFiles(dir, extra = []) {
   const allFiles = tryGitLsFiles(dir) ?? await walkDirectory(dir, dir);
   return allFiles.filter((f) => hasSupportedExtension(f, extra));
@@ -3878,7 +3884,13 @@ async function scanDirectory(dir, upgradeMap, options) {
   };
   if (!await directoryExists(dir)) return empty;
   const extra = options?.extraExtensions ?? [];
-  const supportedFiles = await listSupportedFiles(dir, extra);
+  const includeGlobs = options?.includeGlobs ?? [];
+  let supportedFiles = await listSupportedFiles(dir, extra);
+  if (includeGlobs.length > 0) {
+    supportedFiles = supportedFiles.filter(
+      (f) => includeGlobs.some((g) => matchGlob(f, g))
+    );
+  }
   const prefixRegex = buildPrefixRegex(upgradeMap);
   const { scannedFiles, matches } = await twoPassScan(
     dir,
@@ -4042,7 +4054,7 @@ var program2 = new Command();
 program2.name("llm-upgrade-bot").description(
   "Scan codebases for outdated LLM model strings and propose upgrades"
 ).version("0.1.0");
-program2.argument("[directory]", "directory to scan", ".").option("--fix", "auto-apply upgrades to files").option("--json", "output results as JSON").option("--pr-body", "output markdown PR body for upgrade matches").option("--extensions <exts>", 'extra file extensions to scan (comma-separated, e.g. ".txt,.cfg")').action(async (directory, options) => {
+program2.argument("[directory]", "directory to scan", ".").option("--fix", "auto-apply upgrades to files").option("--json", "output results as JSON").option("--pr-body", "output markdown PR body for upgrade matches").option("--extensions <exts>", 'extra file extensions to scan (comma-separated, e.g. ".txt,.cfg")').option("--include <globs>", 'only scan files matching these globs (comma-separated, e.g. "README.md,src/**")').action(async (directory, options) => {
   const dir = resolve(directory);
   await runScan(dir, options);
 });
@@ -4051,6 +4063,10 @@ function parseExtensions(raw) {
   return raw.split(",").map((e) => e.trim()).map(
     (e) => e.startsWith(".") ? e : `.${e}`
   );
+}
+function parseInclude(raw) {
+  if (!raw) return [];
+  return raw.split(",").map((g) => g.trim()).filter(Boolean);
 }
 async function runScan(dir, options) {
   const mapResult = await loadUpgradeMap();
@@ -4062,8 +4078,9 @@ async function runScan(dir, options) {
   }
   const upgradeMap = mapResult.data;
   const extraExtensions = parseExtensions(options.extensions);
+  const includeGlobs = parseInclude(options.include);
   const start = performance.now();
-  const report = await scanDirectory(dir, upgradeMap, { extraExtensions });
+  const report = await scanDirectory(dir, upgradeMap, { extraExtensions, includeGlobs });
   const durationMs = Math.round(performance.now() - start);
   if (options.json) {
     process.stdout.write(JSON.stringify(report, null, 2) + "\n");
