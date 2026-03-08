@@ -67,22 +67,12 @@ declare function fileMatchesPrefixFilter(content: string, prefixRegex: RegExp): 
 
 declare function scanFile(filePath: string, content: string, upgradeMap: UpgradeMap): ScanResult[];
 
-/**
- * File extensions supported for scanning.
- */
+/** File extensions supported for scanning. */
 declare const SUPPORTED_EXTENSIONS: readonly string[];
 interface ScanOptions {
     extraExtensions?: string[];
     includeGlobs?: string[];
 }
-/**
- * Scan a directory for hardcoded LLM model strings using a two-pass strategy:
- * 1. Prefix filter: skip files with no provider stems
- * 2. Precise scan: extract quoted strings and look up in upgrade map
- *
- * Uses `git ls-files` to list tracked files in git repos.
- * Falls back to recursive directory walk for non-git directories.
- */
 declare function scanDirectory(dir: string, upgradeMap: UpgradeMap, options?: ScanOptions): Promise<ScanReport>;
 
 /**

@@ -57,7 +57,8 @@ npx llm-upgrade-bot ./your-project        # scan
 npx llm-upgrade-bot ./your-project --fix   # auto-fix
 npx llm-upgrade-bot ./your-project --json  # machine-readable
 npx llm-upgrade-bot . --extensions ".txt,.rst"  # add extra file types
-npx llm-upgrade-bot . --include "src/**"   # only scan matching files
+npx llm-upgrade-bot . --include "src/**"         # only scan matching files
+npx llm-upgrade-bot . --include "test/**,src/**"  # include test dirs (excluded by default)
 ```
 
 ## How LLM Upgrade Bot works

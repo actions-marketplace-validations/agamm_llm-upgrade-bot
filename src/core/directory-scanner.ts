@@ -5,47 +5,39 @@ import type { UpgradeMap, ScanReport, ScanResult } from './types.js'
 import { buildPrefixRegex, fileMatchesPrefixFilter } from './prefix-filter.js'
 import { scanFile } from './scanner.js'
 
-/**
- * File extensions supported for scanning.
- */
+/** File extensions supported for scanning. */
 export const SUPPORTED_EXTENSIONS: readonly string[] = Object.freeze([
-  // Web / scripting
   '.py', '.ts', '.js', '.tsx', '.jsx', '.rb', '.php', '.lua',
-  // Systems / compiled
   '.go', '.java', '.rs', '.cs', '.cpp', '.cc', '.c', '.h',
-  // Mobile / JVM
   '.kt', '.kts', '.swift', '.dart', '.scala',
-  // Shell
-  '.sh', '.bash', '.zsh',
-  // Elixir / R
-  '.ex', '.exs', '.r', '.R',
-  // Frontend frameworks
-  '.vue', '.svelte',
-  // Docs / content
-  '.md', '.mdx',
-  // Config / data
-  '.yaml', '.yml', '.json', '.toml',
-  '.env', '.cfg', '.ini',
-  // Infrastructure
+  '.sh', '.bash', '.zsh', '.ex', '.exs', '.r', '.R',
+  '.vue', '.svelte', '.md', '.mdx',
+  '.yaml', '.yml', '.json', '.toml', '.env', '.cfg', '.ini',
   '.tf', '.hcl',
 ])
 
-/**
- * Directories to skip during recursive file walking (non-git fallback).
- */
+/** Directories always skipped (build artifacts, deps). */
 const IGNORED_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', 'vendor',
   '__pycache__', '.venv', 'coverage', '.next', '.nuxt',
 ])
+
+/** Test directories skipped by default (overridable via --include). */
+const TEST_DIRS = new Set([
+  'test', 'tests', '__tests__', 'spec', 'specs',
+  'test_data', 'testdata', 'test-data',
+  'fixtures', '__fixtures__', '__mocks__',
+])
+
+/** Test file patterns: *.test.ts, *.spec.js, test_*.py, *_test.go, *Test.java */
+const TEST_FILE_PATTERN =
+  /\.(?:test|spec)\.\w+$|^test_.*\.py$|_(?:test|spec)\.\w+$|(?:Test|Spec)\.(?:java|kt|scala|swift)$/
 
 export interface ScanOptions {
   extraExtensions?: string[]
   includeGlobs?: string[]
 }
 
-/**
- * Check if a file has a supported extension.
- */
 function hasSupportedExtension(
   filePath: string,
   extra: string[] = [],
@@ -54,11 +46,7 @@ function hasSupportedExtension(
   return SUPPORTED_EXTENSIONS.includes(ext) || extra.includes(ext)
 }
 
-/**
- * Try to list tracked files using `git ls-files`.
- * Returns null if the directory is not a git repository or if
- * no tracked files exist (e.g. untracked subdirectory of a repo).
- */
+/** List tracked files via `git ls-files`, or null if not a git repo. */
 function tryGitLsFiles(dir: string): string[] | null {
   try {
     const output = execSync('git ls-files', {
@@ -78,10 +66,6 @@ function tryGitLsFiles(dir: string): string[] | null {
   }
 }
 
-/**
- * Recursively walk a directory and collect file paths relative to the root.
- * Skips directories in the IGNORED_DIRS set.
- */
 async function walkDirectory(dir: string, root: string): Promise<string[]> {
   let names: string[]
   try {
@@ -105,9 +89,6 @@ async function walkDirectory(dir: string, root: string): Promise<string[]> {
   return files
 }
 
-/**
- * Check if a directory exists and is accessible.
- */
 async function directoryExists(dir: string): Promise<boolean> {
   try {
     const s = await stat(dir)
@@ -117,10 +98,6 @@ async function directoryExists(dir: string): Promise<boolean> {
   }
 }
 
-/**
- * Simple glob matcher supporting * and ** wildcards.
- * Matches against both the full relative path and the basename.
- */
 function matchGlob(filePath: string, pattern: string): boolean {
   const regex = new RegExp(
     '^' +
@@ -137,18 +114,24 @@ function matchGlob(filePath: string, pattern: string): boolean {
 /**
  * List supported files in a directory using git or fallback walk.
  */
+function isTestPath(filePath: string): boolean {
+  const segments = filePath.split('/')
+  if (segments.some((s) => TEST_DIRS.has(s))) return true
+  const file = segments[segments.length - 1] ?? ''
+  return TEST_FILE_PATTERN.test(file)
+}
+
 async function listSupportedFiles(
   dir: string,
   extra: string[] = [],
+  skipTests: boolean = true,
 ): Promise<string[]> {
   const allFiles = tryGitLsFiles(dir) ?? (await walkDirectory(dir, dir))
-  return allFiles.filter((f) => hasSupportedExtension(f, extra))
+  return allFiles.filter((f) =>
+    hasSupportedExtension(f, extra) && (!skipTests || !isTestPath(f)),
+  )
 }
 
-/**
- * Two-pass scan: prefix filter then precise scan on each file.
- * Returns the number of files scanned and all matches found.
- */
 async function twoPassScan(
   dir: string,
   files: string[],
@@ -171,9 +154,6 @@ async function twoPassScan(
   return { scannedFiles, matches }
 }
 
-/**
- * Read a file safely, returning null on error.
- */
 async function readFileSafe(path: string): Promise<string | null> {
   try {
     return await readFile(path, 'utf-8')
@@ -182,14 +162,6 @@ async function readFileSafe(path: string): Promise<string | null> {
   }
 }
 
-/**
- * Scan a directory for hardcoded LLM model strings using a two-pass strategy:
- * 1. Prefix filter: skip files with no provider stems
- * 2. Precise scan: extract quoted strings and look up in upgrade map
- *
- * Uses `git ls-files` to list tracked files in git repos.
- * Falls back to recursive directory walk for non-git directories.
- */
 export async function scanDirectory(
   dir: string,
   upgradeMap: UpgradeMap,
@@ -203,7 +175,8 @@ export async function scanDirectory(
 
   const extra = options?.extraExtensions ?? []
   const includeGlobs = options?.includeGlobs ?? []
-  let supportedFiles = await listSupportedFiles(dir, extra)
+  const skipTests = includeGlobs.length === 0
+  let supportedFiles = await listSupportedFiles(dir, extra, skipTests)
 
   if (includeGlobs.length > 0) {
     supportedFiles = supportedFiles.filter((f) =>

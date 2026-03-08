@@ -217,7 +217,6 @@ import { readFile as readFile2, readdir, stat } from "fs/promises";
 import { join as join2, extname, relative, basename } from "path";
 import { execSync } from "child_process";
 var SUPPORTED_EXTENSIONS = Object.freeze([
-  // Web / scripting
   ".py",
   ".ts",
   ".js",
@@ -226,7 +225,6 @@ var SUPPORTED_EXTENSIONS = Object.freeze([
   ".rb",
   ".php",
   ".lua",
-  // Systems / compiled
   ".go",
   ".java",
   ".rs",
@@ -235,28 +233,22 @@ var SUPPORTED_EXTENSIONS = Object.freeze([
   ".cc",
   ".c",
   ".h",
-  // Mobile / JVM
   ".kt",
   ".kts",
   ".swift",
   ".dart",
   ".scala",
-  // Shell
   ".sh",
   ".bash",
   ".zsh",
-  // Elixir / R
   ".ex",
   ".exs",
   ".r",
   ".R",
-  // Frontend frameworks
   ".vue",
   ".svelte",
-  // Docs / content
   ".md",
   ".mdx",
-  // Config / data
   ".yaml",
   ".yml",
   ".json",
@@ -264,7 +256,6 @@ var SUPPORTED_EXTENSIONS = Object.freeze([
   ".env",
   ".cfg",
   ".ini",
-  // Infrastructure
   ".tf",
   ".hcl"
 ]);
@@ -280,6 +271,20 @@ var IGNORED_DIRS = /* @__PURE__ */ new Set([
   ".next",
   ".nuxt"
 ]);
+var TEST_DIRS = /* @__PURE__ */ new Set([
+  "test",
+  "tests",
+  "__tests__",
+  "spec",
+  "specs",
+  "test_data",
+  "testdata",
+  "test-data",
+  "fixtures",
+  "__fixtures__",
+  "__mocks__"
+]);
+var TEST_FILE_PATTERN = /\.(?:test|spec)\.\w+$|^test_.*\.py$|_(?:test|spec)\.\w+$|(?:Test|Spec)\.(?:java|kt|scala|swift)$/;
 function hasSupportedExtension(filePath, extra = []) {
   const ext = extname(filePath);
   return SUPPORTED_EXTENSIONS.includes(ext) || extra.includes(ext);
@@ -331,9 +336,17 @@ function matchGlob(filePath, pattern) {
   );
   return regex.test(filePath) || regex.test(basename(filePath));
 }
-async function listSupportedFiles(dir, extra = []) {
+function isTestPath(filePath) {
+  const segments = filePath.split("/");
+  if (segments.some((s) => TEST_DIRS.has(s))) return true;
+  const file = segments[segments.length - 1] ?? "";
+  return TEST_FILE_PATTERN.test(file);
+}
+async function listSupportedFiles(dir, extra = [], skipTests = true) {
   const allFiles = tryGitLsFiles(dir) ?? await walkDirectory(dir, dir);
-  return allFiles.filter((f) => hasSupportedExtension(f, extra));
+  return allFiles.filter(
+    (f) => hasSupportedExtension(f, extra) && (!skipTests || !isTestPath(f))
+  );
 }
 async function twoPassScan(dir, files, upgradeMap, prefixRegex) {
   const matches = [];
@@ -363,7 +376,8 @@ async function scanDirectory(dir, upgradeMap, options) {
   if (!await directoryExists(dir)) return empty;
   const extra = options?.extraExtensions ?? [];
   const includeGlobs = options?.includeGlobs ?? [];
-  let supportedFiles = await listSupportedFiles(dir, extra);
+  const skipTests = includeGlobs.length === 0;
+  let supportedFiles = await listSupportedFiles(dir, extra, skipTests);
   if (includeGlobs.length > 0) {
     supportedFiles = supportedFiles.filter(
       (f) => includeGlobs.some((g) => matchGlob(f, g))
