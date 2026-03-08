@@ -45,13 +45,6 @@ export const PROVIDER_CONFIGS: ProviderConfig[] = [
     },
   },
   {
-    name: 'Mistral',
-    url: 'https://api.mistral.ai/v1/models',
-    envVar: 'MISTRAL_API_KEY',
-    authStyle: 'bearer',
-    extractIds: (body) => extractDataIds(body),
-  },
-  {
     name: 'DeepSeek',
     url: 'https://api.deepseek.com/models',
     envVar: 'DEEPSEEK_API_KEY',
