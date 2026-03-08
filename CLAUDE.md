@@ -41,22 +41,26 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 - Fetch latest upgrades.json from URL at runtime, fall back to bundled
 - Exit code: 0 = no upgrades, 1 = upgrades available
 - Provider variants: Native, OpenRouter (covers LiteLLM + Vercel), Bedrock, Together AI (PascalCase), Groq (custom aliases)
-- `variant-validator` checks orphaned targets and cross-variant consistency
-- `model-discovery` fetches 9 provider APIs, diffs, detects safe/major upgrades via date/version heuristics
-- `.github/workflows/discover-models.yml` — weekly auto-discovery, opens PR via peter-evans/create-pull-request
+- `variant-validator` checks cross-variant consistency (OpenRouter entries match native)
+- `model-discovery` fetches 7 provider APIs, diffs, detects safe/major upgrades via date/version heuristics; sanitizes error messages to prevent API key leaks
+- `.github/workflows/discover-models.yml` — hourly auto-discovery, opens PR via peter-evans/create-pull-request (only commits upgrades.json, report goes in PR body)
 
 ## GitHub Action Versioning
 - Published on GitHub Marketplace. Users pin to major version tag: `uses: agamm/llm-upgrade-bot@v1`
-- **On every release:** create a semver tag (e.g. `v1.0.0`, `v1.1.0`) and force-update the major tag:
-  ```
-  git tag v1.x.x && git push origin v1.x.x
-  git tag -f v1 && git push -f origin v1
-  ```
+- **After every fix/feature that affects the action or dist/:**
+  1. Run `pnpm build` to rebuild `dist/`
+  2. Commit the updated `dist/` files (force-add: `git add -f dist/`)
+  3. Bump version: patch for fixes (`v1.0.1`), minor for features (`v1.1.0`)
+  4. Tag and push:
+     ```
+     git tag v1.x.x && git push origin v1.x.x
+     git tag -f v1 && git push -f origin v1
+     ```
+  5. Create a GitHub release: `gh release create v1.x.x --title "v1.x.x" --generate-notes`
 - **Breaking changes** (action input/output removals, behavior changes): bump major tag (`v2`)
-- `dist/` must be committed and included in the tag — the composite action runs `node $ACTION_PATH/dist/cli.js`
+- `dist/` is in `.gitignore` but force-tracked — the composite action runs `node $ACTION_PATH/dist/cli.js`
 - `action.yml` has `branding` for Marketplace (icon: refresh-cw, color: blue)
-- README install button uses `@main` for now — update to `@v1` after first stable release
-- See: https://docs.github.com/en/actions/creating-actions/about-custom-actions#using-tags-for-release-management
+- Current version: **v1.0.0**
 
 ## Gotchas
 - picocolors uses nesting `pc.bold(pc.red(...))` not chaining
