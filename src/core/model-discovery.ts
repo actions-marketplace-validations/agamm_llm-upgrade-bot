@@ -86,10 +86,15 @@ function extractDataIds(body: unknown): string[] {
   return (b.data ?? []).map((m) => m.id ?? '').filter(Boolean)
 }
 
+function sanitizeError(msg: string, key: string | undefined): string {
+  if (!key) return msg
+  return msg.replaceAll(key, '***').replaceAll(key.trim(), '***')
+}
+
 export async function fetchProviderModels(
   config: ProviderConfig,
 ): Promise<Result<string[]>> {
-  const key = process.env[config.envVar]
+  const key = process.env[config.envVar]?.trim()
 
   // OpenRouter works without auth
   if (!key && config.name !== 'OpenRouter') {
@@ -114,8 +119,8 @@ export async function fetchProviderModels(
   try {
     response = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'fetch failed'
-    return { ok: false, error: `${config.name}: ${msg}` }
+    const raw = err instanceof Error ? err.message : 'fetch failed'
+    return { ok: false, error: `${config.name}: ${sanitizeError(raw, key)}` }
   }
 
   if (!response.ok) {
