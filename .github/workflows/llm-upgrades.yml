@@ -14,4 +14,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: LLM Upgrade Bot
-        uses: agamm/llm-upgrade-bot@v1.0.0
+        uses: agamm/llm-upgrade-bot@v1
