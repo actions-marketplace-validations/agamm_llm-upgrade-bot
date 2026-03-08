@@ -2,7 +2,12 @@
 
 **Dependabot for LLM model versions.** Scans your codebase for outdated model strings and opens PRs to upgrade them.
 
-Hardcoded `{gpt-4}`, `{claude-3-opus}`, or `{gemini-2.5-pro}`? This tool finds them and upgrades to the latest versions -- across **235+ model strings** from OpenAI, Anthropic, Google, xAI, Meta, Mistral, DeepSeek, Moonshot, Cohere, Qwen, MiniMax, and more.
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-LLM%20Upgrade%20Bot-blue?logo=github)](https://github.com/marketplace/actions/llm-upgrade-bot)
+[![npm](https://img.shields.io/npm/v/llm-upgrade-bot)](https://www.npmjs.com/package/llm-upgrade-bot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+
+Hardcoded `gpt-4`, `claude-3-opus`, or `gemini-2.5-pro`? This tool finds them and upgrades to the latest versions -- across **235+ model strings** from OpenAI, Anthropic, Google, xAI, Meta, Mistral, DeepSeek, Moonshot, Cohere, Qwen, MiniMax, and more.
 
 ```
 $ llm-upgrade-bot ./src
@@ -17,9 +22,7 @@ $ llm-upgrade-bot ./src
   Found 2 upgradable models in 2 files
 ```
 
-## Install as GitHub Action
-
-[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-LLM%20Upgrade%20Bot-blue?logo=github)](https://github.com/marketplace/actions/llm-upgrade-bot)
+## Quick start — GitHub Action
 
 Create `.github/workflows/llm-upgrades.yml` in your repo:
 
@@ -49,9 +52,10 @@ npx llm-upgrade-bot ./your-project        # scan
 npx llm-upgrade-bot ./your-project --fix   # auto-fix
 npx llm-upgrade-bot ./your-project --json  # machine-readable
 npx llm-upgrade-bot . --extensions ".txt,.rst"  # add extra file types
+npx llm-upgrade-bot . --include "src/**"   # only scan matching files
 ```
 
-## How it works
+## How LLM Upgrade Bot works
 
 We continuously scan model APIs (OpenAI, Anthropic, Google, DeepSeek, Together AI, Groq, and more) every hour to detect new models and automatically update our [upgrade map](data/upgrades.json). You don't need to supply any API keys -- we take care of keeping the model data fresh.
 
@@ -59,7 +63,7 @@ When the action runs in your repo, it:
 
 1. **Fetches** the latest upgrade map with 235+ model entries (always up-to-date)
 2. **Scans** your files and matches model strings against it (including bare model names in `.md`/`.mdx` docs)
-3. **Classifies** each match as a **safe** upgrade (same family, newer version) and/or a **major** upgrade (next-gen model)
+3. **Classifies** each match as a **safe** upgrade (same family, newer version) and/or a **major** upgrade (latest in capability tier)
 4. **Fixes** files in-place, preferring safe upgrades
 5. **Opens a PR** with a summary table of all changes
 
@@ -67,6 +71,10 @@ When the action runs in your repo, it:
 |------|---------|---------|
 | safe | Same family, newer version | `gpt-4o-2024-05-13` -> `gpt-4o-2024-11-20` |
 | major | Latest model in capability tier | `gpt-4o` -> `gpt-5.4` |
+
+## Privacy
+
+**Your code never leaves your repo.** The tool runs entirely inside your GitHub Actions runner (or locally). The only network request is fetching the public [upgrade map](data/upgrades.json) — a static JSON file. No code is uploaded or shared. No API keys required. Works offline with the bundled fallback map.
 
 ## Supported models
 
@@ -82,6 +90,7 @@ See the full [upgrade map](data/upgrades.json).
 | `directory` | `.` | Directory to scan |
 | `base-branch` | `main` | Base branch for the PR |
 | `extensions` | `""` | Extra file extensions to scan (comma-separated, e.g. `".txt,.cfg"`) |
+| `include` | `""` | Only scan files matching these globs (comma-separated, e.g. `"src/**,*.config.ts"`) |
 
 | Output | Description |
 |--------|-------------|

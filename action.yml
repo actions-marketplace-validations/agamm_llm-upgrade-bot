@@ -1,5 +1,5 @@
 name: 'LLM Upgrade Bot'
-description: 'Scan for outdated LLM model strings and create a PR with upgrades'
+description: 'Scan your codebase for outdated LLM model strings and open a PR with upgrades. Supports 235+ models from OpenAI, Anthropic, Google & more. No code leaves your repo.'
 branding:
   icon: refresh-cw
   color: blue
