@@ -2,14 +2,14 @@
 
 **Dependabot for LLM model versions.** Scans your codebase for outdated model strings and opens PRs to upgrade them.
 
-Hardcoded `gpt-4`, `claude-3-opus`, or `gemini-pro`? This tool finds them and upgrades to the latest versions -- across **200+ model strings** from OpenAI, Anthropic, Google, xAI, Meta, Mistral, DeepSeek, Moonshot, Cohere, Qwen, MiniMax, and more.
+Hardcoded `gpt-4`, `claude-3-opus`, or `gemini-pro`? This tool finds them and upgrades to the latest versions -- across **235+ model strings** from OpenAI, Anthropic, Google, xAI, Meta, Mistral, DeepSeek, Moonshot, Cohere, Qwen, MiniMax, and more.
 
 ```
 $ llm-upgrade-bot ./src
 
   src/api.ts:12  "gpt-4o-2024-05-13"
     -> safe:  gpt-4o-2024-11-20
-    -> major: gpt-4.1
+    -> major: gpt-5.4
 
   src/config.yaml:5  "claude-3-opus-20240229"
     -> major: claude-opus-4-6
@@ -57,8 +57,8 @@ We continuously scan model APIs (OpenAI, Anthropic, Google, DeepSeek, Together A
 
 When the action runs in your repo, it:
 
-1. **Fetches** the latest upgrade map with 200+ model entries (always up-to-date)
-2. **Scans** your files and matches model strings against it
+1. **Fetches** the latest upgrade map with 235+ model entries (always up-to-date)
+2. **Scans** your files and matches model strings against it (including bare model names in `.md`/`.mdx` docs)
 3. **Classifies** each match as a **safe** upgrade (same family, newer version) and/or a **major** upgrade (next-gen model)
 4. **Fixes** files in-place, preferring safe upgrades
 5. **Opens a PR** with a summary table of all changes
@@ -66,7 +66,7 @@ When the action runs in your repo, it:
 | Tier | Meaning | Example |
 |------|---------|---------|
 | safe | Same family, newer version | `gpt-4o-2024-05-13` -> `gpt-4o-2024-11-20` |
-| major | Next-generation model | `gpt-4o` -> `gpt-4.1` |
+| major | Latest model in capability tier | `gpt-4o` -> `gpt-5.4` |
 
 ## Supported models
 

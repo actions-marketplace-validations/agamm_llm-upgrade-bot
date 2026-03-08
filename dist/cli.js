@@ -3664,6 +3664,7 @@ function fileMatchesPrefixFilter(content, prefixRegex) {
 // src/core/scanner.ts
 var QUOTED_STRING_REGEX = /"([^"]+)"|'([^']+)'/g;
 var BACKTICK_REGEX = /`([^`]+)`/g;
+var BARE_TOKEN_REGEX = /[a-zA-Z][a-zA-Z0-9\-._/]+[a-zA-Z0-9]/g;
 function matchToResult(match, filePath, lineOffsets, upgradeMap) {
   const modelId = match[1] ?? match[2];
   if (!modelId) return void 0;
@@ -3689,6 +3690,35 @@ function collectMatches(regex, content, filePath, lineOffsets, upgradeMap) {
   }
   return results;
 }
+function isMarkdownFile(filePath) {
+  return filePath.endsWith(".md") || filePath.endsWith(".mdx");
+}
+var SKIP_BEFORE = /* @__PURE__ */ new Set(["{", '"', "'", "`"]);
+var SKIP_AFTER = /* @__PURE__ */ new Set(["}", '"', "'", "`"]);
+function collectBareMatches(content, filePath, lineOffsets, upgradeMap) {
+  const results = [];
+  BARE_TOKEN_REGEX.lastIndex = 0;
+  let match;
+  while ((match = BARE_TOKEN_REGEX.exec(content)) !== null) {
+    const token = match[0];
+    const entry = upgradeMap[token];
+    if (!entry) continue;
+    const before = match.index > 0 ? content[match.index - 1] : "";
+    const after = content[match.index + token.length] ?? "";
+    if (SKIP_BEFORE.has(before ?? "")) continue;
+    if (SKIP_AFTER.has(after ?? "")) continue;
+    const { line, column } = resolvePosition(lineOffsets, match.index);
+    results.push({
+      file: filePath,
+      line,
+      column,
+      matchedText: token,
+      safeUpgrade: entry.safe,
+      majorUpgrade: entry.major
+    });
+  }
+  return results;
+}
 function scanFile(filePath, content, upgradeMap) {
   const lineOffsets = buildLineOffsets(content);
   const results = collectMatches(
@@ -3705,6 +3735,14 @@ function scanFile(filePath, content, upgradeMap) {
     lineOffsets,
     upgradeMap
   ));
+  if (isMarkdownFile(filePath)) {
+    results.push(...collectBareMatches(
+      content,
+      filePath,
+      lineOffsets,
+      upgradeMap
+    ));
+  }
   return results;
 }
 function buildLineOffsets(content) {

@@ -37,12 +37,15 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 
 ## Key Patterns
 - Two-pass scanning: prefix filter (fast) → precise match against upgrade map
+- Markdown scanning: `.md`/`.mdx` files also match bare (unquoted) model names; skips `{model}`, `"model"`, `` `model` `` (already caught by quote regexes)
 - upgrades.json values are objects `{ safe, major }` not plain strings
 - Fetch latest upgrades.json from URL at runtime, fall back to bundled
 - Exit code: 0 = no upgrades, 1 = upgrades available
 - Provider variants: Native, OpenRouter (covers LiteLLM + Vercel), Bedrock, Together AI (PascalCase), Groq (custom aliases)
 - `variant-validator` checks cross-variant consistency (OpenRouter entries match native)
 - `model-discovery` fetches 7 provider APIs, diffs, detects safe/major upgrades via date/version heuristics; sanitizes error messages to prevent API key leaks
+- Discovery refreshes stale major targets: if a newer model in the same line/suffix is found, it proposes updating the existing major target
+- "major" tier targets the **latest** model in the same capability tier (e.g. flagship→flagship), not just one generation ahead
 - `.github/workflows/discover-models.yml` — hourly auto-discovery, opens PR via peter-evans/create-pull-request (only commits upgrades.json, report goes in PR body)
 
 ## GitHub Action Versioning
@@ -60,7 +63,7 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 - **Breaking changes** (action input/output removals, behavior changes): bump major tag (`v2`)
 - `dist/` is in `.gitignore` but force-tracked — the composite action runs `node $ACTION_PATH/dist/cli.js`
 - `action.yml` has `branding` for Marketplace (icon: refresh-cw, color: blue)
-- Current version: **v1.0.0**
+- Current version: **v1.2.0**
 
 ## Gotchas
 - picocolors uses nesting `pc.bold(pc.red(...))` not chaining
