@@ -1,0 +1,17 @@
+name: LLM Model Upgrades
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: LLM Upgrade Bot
+        uses: agamm/llm-upgrade-bot@v1.0.0
