@@ -88,6 +88,14 @@ See the full [upgrade map](data/upgrades.json).
 
 The action never creates duplicate PRs. Open or rejected PRs block new ones; merged PRs don't.
 
+## Disclaimer
+
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. THE AUTHORS AND CONTRIBUTORS SHALL NOT BE HELD LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF THIS SOFTWARE, INCLUDING BUT NOT LIMITED TO: incorrect or incompatible model upgrade suggestions, breaking changes to your codebase resulting from applied upgrades, third-party API changes or outages, data loss, service interruptions, or any direct, indirect, incidental, or consequential damages.
+
+Model upgrade mappings are provided on a best-effort basis and may be inaccurate, incomplete, or unsuitable for your use case. You are solely responsible for reviewing and testing all changes before merging. Use of this tool in production environments is at your own risk.
+
+By using this software, you acknowledge that you have read this disclaimer and agree to its terms.
+
 ## License
 
 MIT
