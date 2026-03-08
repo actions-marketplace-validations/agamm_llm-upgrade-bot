@@ -211,6 +211,57 @@ model3 = \`claude-3-opus-20240229\`
   })
 })
 
+describe('scanFile with markdown files', () => {
+  it('matches bare (unquoted) model names in .md files', () => {
+    const content = 'We recommend gpt-4 for complex tasks.\n'
+    const results = scanFile('README.md', content, testMap)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]?.matchedText).toBe('gpt-4')
+    expect(results[0]?.majorUpgrade).toBe('gpt-4.1')
+  })
+
+  it('matches bare model names in .mdx files', () => {
+    const content = 'Use gemini-pro as the default model.\n'
+    const results = scanFile('docs/guide.mdx', content, testMap)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]?.matchedText).toBe('gemini-pro')
+  })
+
+  it('skips model names inside curly braces (template placeholders)', () => {
+    const content = 'Set model to {gpt-4} in the config.\n'
+    const results = scanFile('docs.md', content, testMap)
+
+    expect(results).toEqual([])
+  })
+
+  it('skips model names inside quotes (handled by quoted regex)', () => {
+    const content = 'Use "gpt-4" for best results.\n'
+    const results = scanFile('docs.md', content, testMap)
+
+    // Should find via quoted regex only, not double-counted by bare
+    expect(results).toHaveLength(1)
+    expect(results[0]?.matchedText).toBe('gpt-4')
+  })
+
+  it('does not match bare model names in non-markdown files', () => {
+    const content = 'Use gpt-4 for best results.\n'
+    const results = scanFile('notes.txt', content, testMap)
+
+    expect(results).toEqual([])
+  })
+
+  it('matches both quoted and bare model names in markdown', () => {
+    const content = 'Use gpt-4 or `gemini-pro` for tasks.\n'
+    const results = scanFile('guide.md', content, testMap)
+
+    expect(results).toHaveLength(2)
+    const texts = results.map((r) => r.matchedText).sort()
+    expect(texts).toEqual(['gemini-pro', 'gpt-4'])
+  })
+})
+
 describe('scanFile with fixture files', () => {
   it('finds correct matches in api.ts', async () => {
     const content = await readFile(join(FIXTURES_DIR, 'api.ts'), 'utf-8')

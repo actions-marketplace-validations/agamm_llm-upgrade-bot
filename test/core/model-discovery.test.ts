@@ -87,11 +87,31 @@ describe('suggestMajorUpgrades', () => {
     expect(first?.confidence).toBe('suggested')
   })
 
-  it('skips entries that already have major upgrade', () => {
+  it('refreshes major target when higher version discovered in same line', () => {
     const map: UpgradeMap = {
       'gpt-4': { safe: null, major: 'gpt-5' },
     }
     const newIds = ['gpt-6']
+    const proposed = suggestMajorUpgrades(newIds, map)
+    expect(proposed).toHaveLength(1)
+    const first = proposed[0]
+    expect(first?.key).toBe('gpt-4')
+    expect(first?.entry.major).toBe('gpt-6')
+  })
+
+  it('does not refresh major when new version is lower than current target', () => {
+    const map: UpgradeMap = {
+      'gpt-3': { safe: null, major: 'gpt-5' },
+    }
+    const newIds = ['gpt-4']
+    expect(suggestMajorUpgrades(newIds, map)).toEqual([])
+  })
+
+  it('does not cross suffix tiers when refreshing major', () => {
+    const map: UpgradeMap = {
+      'gpt-4': { safe: null, major: 'gpt-5' },
+    }
+    const newIds = ['gpt-6-mini']
     expect(suggestMajorUpgrades(newIds, map)).toEqual([])
   })
 })

@@ -246,7 +246,13 @@ export function suggestMajorUpgrades(
     if (!parsed) continue
 
     for (const [existingKey, existingEntry] of Object.entries(map)) {
-      if (existingEntry.major !== null) continue
+      if (existingEntry.major !== null) {
+        const currentMajorParsed = parseModelVersion(existingEntry.major)
+        if (!currentMajorParsed) continue
+        if (currentMajorParsed.line !== parsed.line) continue
+        if (!isHigherVersion(parsed.version, currentMajorParsed.version)) continue
+        if (currentMajorParsed.suffix !== parsed.suffix) continue
+      }
 
       const existingParsed = parseModelVersion(existingKey)
       if (!existingParsed) continue

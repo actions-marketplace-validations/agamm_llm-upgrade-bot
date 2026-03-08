@@ -8,6 +8,8 @@ import type { UpgradeMap, ScanResult } from './types.js'
  */
 const QUOTED_STRING_REGEX = /"([^"]+)"|'([^']+)'/g
 const BACKTICK_REGEX = /`([^`]+)`/g
+/** Matches bare tokens that could be model IDs (for markdown files). */
+const BARE_TOKEN_REGEX = /[a-zA-Z][a-zA-Z0-9\-._/]+[a-zA-Z0-9]/g
 
 /**
  * Scan file content for hardcoded LLM model strings and look them up
@@ -65,6 +67,46 @@ function collectMatches(
   return results
 }
 
+function isMarkdownFile(filePath: string): boolean {
+  return filePath.endsWith('.md') || filePath.endsWith('.mdx')
+}
+
+/** Characters that indicate a template placeholder or quoted context. */
+const SKIP_BEFORE = new Set(['{', '"', "'", '`'])
+const SKIP_AFTER = new Set(['}', '"', "'", '`'])
+
+/**
+ * Scan for bare (unquoted) model names in markdown files.
+ * Skips tokens inside quotes or curly braces (template placeholders).
+ */
+function collectBareMatches(
+  content: string,
+  filePath: string,
+  lineOffsets: number[],
+  upgradeMap: UpgradeMap,
+): ScanResult[] {
+  const results: ScanResult[] = []
+  BARE_TOKEN_REGEX.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = BARE_TOKEN_REGEX.exec(content)) !== null) {
+    const token = match[0]
+    const entry = upgradeMap[token]
+    if (!entry) continue
+    const before = match.index > 0 ? content[match.index - 1] : ''
+    const after = content[match.index + token.length] ?? ''
+    if (SKIP_BEFORE.has(before ?? '')) continue
+    if (SKIP_AFTER.has(after ?? '')) continue
+    const { line, column } = resolvePosition(lineOffsets, match.index)
+    results.push({
+      file: filePath, line, column,
+      matchedText: token,
+      safeUpgrade: entry.safe,
+      majorUpgrade: entry.major,
+    })
+  }
+  return results
+}
+
 export function scanFile(
   filePath: string,
   content: string,
@@ -77,6 +119,11 @@ export function scanFile(
   results.push(...collectMatches(
     BACKTICK_REGEX, content, filePath, lineOffsets, upgradeMap,
   ))
+  if (isMarkdownFile(filePath)) {
+    results.push(...collectBareMatches(
+      content, filePath, lineOffsets, upgradeMap,
+    ))
+  }
   return results
 }
 
