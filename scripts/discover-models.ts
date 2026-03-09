@@ -60,7 +60,7 @@ async function main() {
   console.log(`Loaded ${String(knownKeys.size)} known model entries`)
 
   // Require all provider API keys (some optional — see GitHub issues)
-  const optional = new Set(['OpenRouter', 'xAI', 'Anthropic'])
+  const optional = new Set(['OpenRouter', 'xAI', 'Anthropic', 'Together'])
   const missing = PROVIDER_CONFIGS
     .filter((c) => !optional.has(c.name) && !process.env[c.envVar])
     .map((c) => c.envVar)
