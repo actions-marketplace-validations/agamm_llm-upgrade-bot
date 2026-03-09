@@ -71,6 +71,24 @@ describe('detectSafeUpgrades', () => {
     const newIds = ['gpt-4o-2024-11-20']
     expect(detectSafeUpgrades(newIds, map)).toEqual([])
   })
+
+  it('detects safe upgrade for dated snapshot of same version', () => {
+    const map: UpgradeMap = {
+      'gpt-5.4-2025-11-20': { safe: null, major: null },
+    }
+    const newIds = ['gpt-5.4-2026-03-05']
+    const proposed = detectSafeUpgrades(newIds, map)
+    expect(proposed).toHaveLength(1)
+    expect(proposed[0]?.entry.safe).toBe('gpt-5.4-2026-03-05')
+  })
+
+  it('does not match non-dated entry against dated model', () => {
+    const map: UpgradeMap = {
+      'gpt-5.4': { safe: null, major: null },
+    }
+    const newIds = ['gpt-5.4-2026-03-05']
+    expect(detectSafeUpgrades(newIds, map)).toEqual([])
+  })
 })
 
 describe('suggestMajorUpgrades', () => {
@@ -141,6 +159,31 @@ describe('suggestMajorUpgrades', () => {
     const proposed = suggestMajorUpgrades(newIds, map)
     expect(proposed).toHaveLength(1)
     expect(proposed[0]?.entry.major).toBe('gpt-5.4')
+  })
+
+  it('skips date-stamped models (handled by detectSafeUpgrades)', () => {
+    const map: UpgradeMap = {
+      'gpt-5.2': { safe: 'gpt-5.4', major: null },
+    }
+    const newIds = ['gpt-5.4-2026-03-05']
+    expect(suggestMajorUpgrades(newIds, map)).toEqual([])
+  })
+
+  it('skips date-stamped models even when they match tier', () => {
+    const map: UpgradeMap = {
+      'gpt-4o': { safe: null, major: 'gpt-5.4' },
+    }
+    const newIds = ['gpt-5.4-2026-03-05']
+    expect(suggestMajorUpgrades(newIds, map)).toEqual([])
+  })
+
+  it('does not skip non-date suffixed models like -preview', () => {
+    const map: UpgradeMap = {
+      'gemini-2.0-flash': { safe: null, major: null },
+    }
+    const newIds = ['gemini-3-flash-preview']
+    const proposed = suggestMajorUpgrades(newIds, map)
+    expect(proposed).toHaveLength(1)
   })
 })
 

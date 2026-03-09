@@ -222,6 +222,8 @@ export function suggestMajorUpgrades(
   const proposed: ProposedEntry[] = []
 
   for (const newId of newIds) {
+    // Date-stamped models are handled by detectSafeUpgrades, not here
+    if (DATE_PATTERN.test(newId)) continue
     const parsed = parseModelVersion(newId)
     if (!parsed) continue
 

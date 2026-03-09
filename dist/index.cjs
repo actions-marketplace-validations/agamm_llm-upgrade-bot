@@ -767,6 +767,7 @@ function detectSafeUpgrades(newIds, map, sourceMap) {
 function suggestMajorUpgrades(newIds, map, sourceMap) {
   const proposed = [];
   for (const newId of newIds) {
+    if (DATE_PATTERN.test(newId)) continue;
     const parsed = parseModelVersion(newId);
     if (!parsed) continue;
     for (const [existingKey, existingEntry] of Object.entries(map)) {
