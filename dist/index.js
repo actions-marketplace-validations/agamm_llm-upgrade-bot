@@ -544,6 +544,9 @@ function parseModelVersion(id) {
   if (version.some(isNaN)) return null;
   return { line, version, suffix, tier: tierOf(suffix) };
 }
+function normalizeVersionSeparators(id) {
+  return id.replace(/(\d)-(\d)/g, "$1.$2");
+}
 function isHigherVersion(a, b) {
   const len = Math.max(a.length, b.length);
   for (let i = 0; i < len; i++) {
@@ -741,6 +744,9 @@ function suggestMajorUpgrades(newIds, map, sourceMap) {
       if (!isHigherVersion(parsed.version, existingParsed.version)) continue;
       if (existingParsed.version.length === 1 && (existingParsed.version[0] ?? 0) > 1e3) continue;
       if (existingEntry.safe === newId) continue;
+      const norm = normalizeVersionSeparators;
+      if (norm(newId) === norm(existingKey)) continue;
+      if (existingEntry.major !== null && norm(newId) === norm(existingEntry.major)) continue;
       proposed.push({
         key: existingKey,
         entry: { safe: existingEntry.safe, major: newId },

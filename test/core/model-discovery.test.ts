@@ -193,6 +193,22 @@ describe('suggestMajorUpgrades', () => {
     const proposed = suggestMajorUpgrades(newIds, map)
     expect(proposed).toHaveLength(1)
   })
+
+  it('does not replace major with same model using dots instead of hyphens', () => {
+    const map: UpgradeMap = {
+      'claude-sonnet-4-0': { safe: null, major: 'claude-sonnet-4-6' },
+    }
+    const newIds = ['claude-sonnet-4.6']
+    expect(suggestMajorUpgrades(newIds, map)).toEqual([])
+  })
+
+  it('does not propose dot variant as upgrade for hyphen variant of same model', () => {
+    const map: UpgradeMap = {
+      'claude-sonnet-4-6': { safe: null, major: null },
+    }
+    const newIds = ['claude-sonnet-4.6']
+    expect(suggestMajorUpgrades(newIds, map)).toEqual([])
+  })
 })
 
 describe('generateReport', () => {

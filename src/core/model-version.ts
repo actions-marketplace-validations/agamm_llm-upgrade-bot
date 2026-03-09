@@ -33,6 +33,11 @@ export function parseModelVersion(id: string): ModelVersion | null {
   return { line, version, suffix, tier: tierOf(suffix) }
 }
 
+/** Normalize digit-hyphen-digit to digit-dot-digit so 4-6 and 4.6 compare equal */
+export function normalizeVersionSeparators(id: string): string {
+  return id.replace(/(\d)-(\d)/g, '$1.$2')
+}
+
 export function isHigherVersion(a: number[], b: number[]): boolean {
   const len = Math.max(a.length, b.length)
   for (let i = 0; i < len; i++) {

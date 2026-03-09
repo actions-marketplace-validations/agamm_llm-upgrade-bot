@@ -1,5 +1,5 @@
 import type { UpgradeEntry, UpgradeMap, ProviderConfig, Result } from './types.js'
-import { parseModelVersion, isHigherVersion } from './model-version.js'
+import { parseModelVersion, isHigherVersion, normalizeVersionSeparators } from './model-version.js'
 
 export interface ProposedEntry {
   key: string
@@ -245,6 +245,10 @@ export function suggestMajorUpgrades(
       if (existingParsed.version.length === 1 && (existingParsed.version[0] ?? 0) > 1000) continue
       // Skip if proposed target is already the safe upgrade
       if (existingEntry.safe === newId) continue
+      // Skip if same model with different separator (e.g., 4-6 vs 4.6)
+      const norm = normalizeVersionSeparators
+      if (norm(newId) === norm(existingKey)) continue
+      if (existingEntry.major !== null && norm(newId) === norm(existingEntry.major)) continue
 
       proposed.push({
         key: existingKey,

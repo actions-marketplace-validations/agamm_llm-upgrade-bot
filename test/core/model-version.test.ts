@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { tierOf, parseModelVersion, isHigherVersion } from '../../src/core/model-version.js'
+import { tierOf, parseModelVersion, isHigherVersion, normalizeVersionSeparators } from '../../src/core/model-version.js'
 
 describe('tierOf', () => {
   it.each([
@@ -89,5 +89,18 @@ describe('isHigherVersion', () => {
 
   it('[2,0] > [1,9]', () => {
     expect(isHigherVersion([2, 0], [1, 9])).toBe(true)
+  })
+})
+
+describe('normalizeVersionSeparators', () => {
+  it.each([
+    ['claude-sonnet-4-6', 'claude-sonnet-4.6'],
+    ['claude-sonnet-4.6', 'claude-sonnet-4.6'],
+    ['claude-3-5-sonnet', 'claude-3.5-sonnet'],
+    ['gpt-4o-mini', 'gpt-4o-mini'],
+    ['gemini-2.0-flash', 'gemini-2.0-flash'],
+    ['o3-mini', 'o3-mini'],
+  ])('normalizeVersionSeparators(%j) → %j', (input, expected) => {
+    expect(normalizeVersionSeparators(input)).toBe(expected)
   })
 })
