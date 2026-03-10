@@ -251,6 +251,8 @@ export function suggestMajorUpgrades(
     if (!parsed) continue
 
     for (const [existingKey, existingEntry] of Object.entries(map)) {
+      // Date-stamped keys only get safe (timestamp) upgrades, never major
+      if (DATE_PATTERN.test(existingKey)) continue
       if (existingEntry.major !== null) {
         const currentMajorParsed = parseModelVersion(norm(existingEntry.major))
         if (!currentMajorParsed) continue

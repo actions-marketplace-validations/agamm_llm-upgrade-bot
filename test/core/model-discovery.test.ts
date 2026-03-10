@@ -391,6 +391,14 @@ describe('suggestMajorUpgrades', () => {
     expect(suggestMajorUpgrades(newIds, map)).toEqual([])
   })
 
+  it('does not propose major upgrade for date-stamped existing keys', () => {
+    const map: UpgradeMap = {
+      'claude-haiku-4-5-20251001': { safe: null, major: null },
+    }
+    const newIds = ['claude-haiku-4-5']
+    expect(suggestMajorUpgrades(newIds, map)).toEqual([])
+  })
+
   it('does not treat date codes as version components', () => {
     const map: UpgradeMap = {
       'moonshotai/kimi-k2': { safe: null, major: 'moonshotai/kimi-k2.5' },
