@@ -10,8 +10,8 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 - Lint: `pnpm lint` (eslint)
 - Format: `pnpm format` (prettier)
 - Typecheck: `pnpm typecheck` (tsc --noEmit)
-- Validate: `pnpm validate` (variant consistency checks on upgrades.json)
-- Discover: `pnpm discover` (fetch provider APIs, propose new upgrade paths)
+- Validate: `pnpm validate` (variant consistency + families.json derivation check)
+- Discover: `pnpm discover` (fetch provider APIs, classify new models, derive upgrades.json)
 
 ## Code Style
 - Functional-first: pure functions, no classes, data-in/data-out
@@ -24,7 +24,11 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 - `src/cli/` — Commander.js commands, terminal output (picocolors + nanospinner)
 - `action.yml` — composite GitHub Action (no src/action/ dir, delegates to CLI + peter-evans/create-pull-request)
 - Dependency direction: cli/ → core/. Core never imports from cli.
-- `data/upgrades.json` — auto-discovered flat map `{ "old-model": { "safe": "...", "major": "..." } }` with `_pinned` array for manually curated keys that discovery won't overwrite
+- `data/families.json` — source of truth: nested arrays of model progressions (outer = major generations, inner = safe upgrades). Dots canonical for version separators. Un-timestamped aliases go last in inner arrays.
+- `data/upgrades.json` — **derived** from families.json via `deriveUpgradeMap()`. Flat map `{ "model-id": { "safe": "...", "major": "..." } }`. Includes separator variants (dot↔hyphen) and prefix variants (openai/, anthropic/, etc.)
+- `src/core/families.ts` — load/query families.json
+- `src/core/derive-upgrades.ts` — pure derivation: families.json → upgrades.json (separator variants, prefix variants)
+- `src/core/ai-classifier.ts` — AI-assisted classification of new models via Claude Agent SDK (WebSearch + WebFetch + structured output)
 
 ## Guardrails
 - **Max file:** 200 lines — refactor before exceeding
@@ -43,11 +47,13 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 - Exit code: 0 = no upgrades, 1 = upgrades available
 - Provider variants: Native, OpenRouter (covers LiteLLM + Vercel), Bedrock, Together AI (PascalCase), Groq (custom aliases)
 - `variant-validator` checks cross-variant consistency (OpenRouter entries match native)
-- `model-version` parses version strings, extracts semantic attributes (paramSize, contextSize, quantization) from suffixes, and computes tier by stripping noise words and attribute tokens
-- `model-discovery` fetches 7 provider APIs, diffs, detects safe/major upgrades via date/version heuristics; sanitizes error messages to prevent API key leaks
-- Discovery refreshes stale major targets: if a newer model in the same line/tier is found, it proposes updating the existing major target
-- "major" tier targets the **latest** model in the same capability tier (e.g. flagship→flagship), not just one generation ahead
-- `.github/workflows/discover-models.yml` — hourly auto-discovery, opens PR via peter-evans/create-pull-request (only commits upgrades.json, report goes in PR body)
+- `model-discovery` fetches 8 provider APIs, diffs new models; sanitizes error messages to prevent API key leaks
+- Scanner strips OpenRouter colon tags (`:free`, `:exacto`, `:nitro`) at scan time — no need for colon-tagged entries in upgrades.json
+- `derive-upgrades` generates separator variants (4.6→4-6) and prefix variants (openai/X, anthropic/X) from native lineages via `PREFIX_RULES`
+- Cross-tier prevention: families.json separates mini/nano/flagship into distinct lineages by design
+- AI classifier pre-filters structural noise (fine-tunes, colon-tagged, org-scoped) before sending to the agent — all other relevance decisions (non-chat models, provider prefixes) are left to the AI
+- Agent SDK `outputFormat` returns structured JSON (placements + newLineages + unclassified) — no regex parsing of agent text
+- `.github/workflows/discover-models.yml` — hourly auto-discovery, opens PR via peter-evans/create-pull-request (commits upgrades.json + families.json)
 
 ## GitHub Action Versioning
 - Published on GitHub Marketplace. Users pin to major version tag: `uses: agamm/llm-upgrade-bot@v1`
@@ -67,9 +73,11 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 - Current version: **v1.6.0**
 
 ## Gotchas
-- Version components in model IDs are 1–2 digits. 3+ digit components (e.g., `0905`, `0711`) are date/build codes — `normalizeVersionSeparators` and `matchSeparatorStyle` skip them
-- Colon-tagged models (`:free`, `:exacto`, `:nitro`) are OpenRouter variant tags, not real models — discovery skips them as upgrade targets
+- Version components in model IDs are 1–2 digits. 3+ digit components (e.g., `0905`, `0711`) are date/build codes — `toHyphenVariant` and `isVersionSequence` in derive-upgrades.ts skip them
+- Colon-tagged models (`:free`, `:exacto`, `:nitro`) are OpenRouter variant tags — scanner strips them at scan time, discovery skips them as new models
 - picocolors uses nesting `pc.bold(pc.red(...))` not chaining
 - Commander: use `new Command()` (not global), `parseAsync()` for async, `.exitOverride()` for tests
 - pnpm v10+ blocks postinstall scripts by default — use `pnpm.onlyBuiltDependencies`
 - tsup: watch `package.json` exports field for ESM/CJS dual output
+- Agent SDK (`@anthropic-ai/claude-agent-sdk`) requires `ANTHROPIC_API_KEY` — classifier gracefully falls back to all-unclassified if missing
+- `prefilter()` only strips structural noise (fine-tunes, colon-tagged, org-scoped) — resist adding content-based heuristics (embed, tts, etc.), let the AI judge relevance
