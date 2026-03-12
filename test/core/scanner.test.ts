@@ -318,6 +318,51 @@ describe('scanFile with colon-tagged models', () => {
   })
 })
 
+describe('scanFile with -latest suffix', () => {
+  it('strips -latest and looks up base, appends -latest to upgrade targets', () => {
+    const content = 'model: "gpt-4-latest"\n'
+    const results = scanFile('config.yaml', content, testMap)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]).toEqual({
+      file: 'config.yaml',
+      line: 1,
+      column: 7,
+      matchedText: 'gpt-4-latest',
+      safeUpgrade: null,
+      majorUpgrade: 'gpt-4.1-latest',
+    })
+  })
+
+  it('keeps exact match if -latest ID exists in map directly', () => {
+    const mapWithLatest: UpgradeMap = {
+      ...testMap,
+      'custom-model-latest': { safe: 'custom-model-v2', major: null },
+    }
+    const content = '"custom-model-latest"\n'
+    const results = scanFile('test.ts', content, mapWithLatest)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]?.safeUpgrade).toBe('custom-model-v2')
+  })
+
+  it('returns empty for unknown base model with -latest', () => {
+    const content = '"unknown-model-latest"\n'
+    const results = scanFile('test.ts', content, testMap)
+    expect(results).toEqual([])
+  })
+
+  it('appends -latest to both safe and major targets', () => {
+    const content = '"gpt-4o-2024-05-13-latest"\n'
+    const results = scanFile('test.ts', content, testMap)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]?.matchedText).toBe('gpt-4o-2024-05-13-latest')
+    expect(results[0]?.safeUpgrade).toBe('gpt-4o-2024-08-06-latest')
+    expect(results[0]?.majorUpgrade).toBe('gpt-4.1-latest')
+  })
+})
+
 describe('scanFile with fixture files', () => {
   it('finds correct matches in api.ts', async () => {
     const content = await readFile(join(FIXTURES_DIR, 'api.ts'), 'utf-8')

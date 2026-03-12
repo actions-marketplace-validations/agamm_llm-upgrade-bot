@@ -53,6 +53,10 @@ describe('prefilter', () => {
     expect(prefilter(['user@org/custom-model'])).toEqual([])
   })
 
+  it('strips -latest aliases', () => {
+    expect(prefilter(['gpt-4-latest', 'mistral-small-latest'])).toEqual([])
+  })
+
   it('keeps provider-prefixed models (AI decides relevance)', () => {
     expect(prefilter(['openai/gpt-5.4', 'anthropic/claude-opus-4.6'])).toEqual([
       'openai/gpt-5.4', 'anthropic/claude-opus-4.6',

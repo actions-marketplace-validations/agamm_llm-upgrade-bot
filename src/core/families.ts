@@ -39,8 +39,8 @@ export function stringifyFamilies(families: FamiliesMap): string {
   const parts: string[] = ['{']
   const keys = Object.keys(families)
   for (let i = 0; i < keys.length; i++) {
-    const key = keys[i]!
-    const chain = families[key]!
+    const key = keys[i] as string
+    const chain = families[key] as FamilyChain
     const gens = chain.map((g) => `    ${JSON.stringify(g)}`)
     const comma = i < keys.length - 1 ? ',' : ''
     parts.push(`  ${JSON.stringify(key)}: [`, gens.join(',\n'), `  ]${comma}`)

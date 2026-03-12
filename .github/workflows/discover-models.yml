@@ -47,42 +47,12 @@ jobs:
           prompt: |
             Current directory: /home/runner/work/llm-upgrade-bot/llm-upgrade-bot
 
+            Read `.claude/skills/classifier.md` — it contains all classification rules. If the file is missing, STOP and fail with an error.
+
             Read `data/new-models.txt` for newly discovered model IDs.
             Read `data/families.json` for current model families.
 
-            ## families.json structure
-            - Keys = family names (e.g. "openai-flagship")
-            - Outer array = major generations, inner = safe upgrades
-            - Un-timestamped aliases go LAST in inner arrays
-            - Date-stamped snapshots share inner array with alias
-            - Dots for version separators (gpt-4.1 not gpt-4-1)
-            - Never mix tiers (mini/nano/flagship = separate families)
-            - Different capabilities = different families (chat ≠ reasoning ≠ search ≠ deep-research)
-            - Provider-prefixed IDs handled by derivation — don't add them
-
-            Classify directly only for obvious cases (dated snapshots of known models).
-            WebSearch when unsure whether models are same-capability tiers vs different products.
-            Models with different param sizes (8B vs 70B) or context sizes (32K vs 128K) are usually different families unless they share a tier name (e.g. llama-small groups 3B→8B→17B).
-            Edit families.json in place.
-
-            ## families.json format
-            One line per generation (inner array), indented under each key:
-            ```
-            {
-              "family-name": [
-                ["model-a","model-b"],
-                ["model-c"]
-              ],
-              "other-family": [
-                ["model-x"]
-              ]
-            }
-            ```
-            This gives readable git diffs per generation. Do NOT use single-line compact JSON.
-
-            Then run:
-            - `pnpm tsx scripts/derive-upgrades.ts`
-            - `pnpm tsx scripts/validate-variants.ts`
+            Follow the rules in classifier.md exactly. Edit families.json in place.
           claude_args: '--allowedTools "Read,Edit,Write,Bash(pnpm:*),WebSearch,WebFetch"'
           show_full_output: false
 
@@ -108,5 +78,8 @@ jobs:
           body: |
             Automatically discovered and classified new LLM models.
             Review the changes to `data/families.json` and `data/upgrades.json`.
+
+            If something looks wrong, comment `@claude <what's wrong and why>` — it will fix
+            the PR and update `.claude/skills/classifier.md` with a generic rule for future runs.
           commit-message: 'chore: add newly discovered LLM models'
           delete-branch: true

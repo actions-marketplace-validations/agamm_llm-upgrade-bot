@@ -22,6 +22,7 @@ const STRUCTURAL_NOISE = [
   /^ft[:-]/i, // fine-tune prefixes
   /[:@]/, // colon-tagged or scoped IDs
   /^accounts\//i, // org-scoped fine-tunes
+  /-latest$/, // floating aliases stripped at scan time
 ]
 
 export function prefilter(ids: string[]): string[] {

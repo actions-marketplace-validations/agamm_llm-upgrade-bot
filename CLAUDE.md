@@ -54,6 +54,8 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 - Cross-tier prevention: families.json separates mini/nano/flagship into distinct lineages by design
 - `prefilter()` in `variants.ts` strips structural noise (fine-tunes, colon-tagged, org-scoped) — all other relevance decisions left to the AI
 - `.github/workflows/discover-models.yml` — hourly auto-discovery: TypeScript fetches/diffs models → writes `data/new-models.txt` → Claude Code Action classifies into families.json → derives upgrades.json → opens PR via peter-evans/create-pull-request
+- `.claude/skills/classifier.md` — classification rules loaded by the discovery workflow. This is the classifier's persistent memory — when a discovery PR has mistakes, comment `@claude <what was wrong>` on the PR and it updates this file with a generic rule for future runs
+- Scanner strips `-latest` suffixes at scan time (like colon tags) — no `-latest` entries in families.json
 
 ## GitHub Action Versioning
 - Published on GitHub Marketplace. Users pin to major version tag: `uses: agamm/llm-upgrade-bot@v1`
@@ -79,4 +81,5 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 - Commander: use `new Command()` (not global), `parseAsync()` for async, `.exitOverride()` for tests
 - pnpm v10+ blocks postinstall scripts by default — use `pnpm.onlyBuiltDependencies`
 - tsup: watch `package.json` exports field for ESM/CJS dual output
-- `prefilter()` only strips structural noise (fine-tunes, colon-tagged, org-scoped) — resist adding content-based heuristics (embed, tts, etc.), let the AI judge relevance
+- `-latest` models (e.g. `mistral-small-latest`) are floating aliases — scanner strips the suffix at scan time, discovery prefilter skips them. Never add `-latest` entries to families.json.
+- `prefilter()` only strips structural noise (fine-tunes, colon-tagged, org-scoped, `-latest`) — resist adding content-based heuristics (embed, tts, etc.), let the AI judge relevance

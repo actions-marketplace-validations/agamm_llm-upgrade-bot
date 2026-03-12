@@ -45,15 +45,22 @@ function matchToResult(
 
   // Try exact match first (handles Bedrock ":0" suffixes)
   let entry = upgradeMap[modelId]
-  let colonTag = ''
+  let suffix = ''
 
   // If no exact match, try stripping colon tag (OpenRouter :free, :exacto, etc.)
   if (!entry) {
     const stripped = stripColonTag(modelId)
     if (stripped) {
       entry = upgradeMap[stripped.base]
-      if (entry) colonTag = stripped.tag
+      if (entry) suffix = stripped.tag
     }
+  }
+
+  // If no match, try stripping -latest suffix (floating alias)
+  if (!entry && modelId.endsWith('-latest')) {
+    const base = modelId.slice(0, -7) // strip "-latest"
+    entry = upgradeMap[base]
+    if (entry) suffix = '-latest'
   }
 
   if (!entry) return undefined
@@ -64,8 +71,8 @@ function matchToResult(
     line,
     column,
     matchedText: modelId,
-    safeUpgrade: entry.safe ? entry.safe + colonTag : null,
-    majorUpgrade: entry.major ? entry.major + colonTag : null,
+    safeUpgrade: entry.safe ? entry.safe + suffix : null,
+    majorUpgrade: entry.major ? entry.major + suffix : null,
   }
 }
 
