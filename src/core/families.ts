@@ -31,6 +31,24 @@ export function allModelsInFamilies(families: FamiliesMap): Set<string> {
   return models
 }
 
+/**
+ * Serialize families for readable git diffs.
+ * Each family gets one line per generation (inner array), indented under its key.
+ */
+export function stringifyFamilies(families: FamiliesMap): string {
+  const parts: string[] = ['{']
+  const keys = Object.keys(families)
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]!
+    const chain = families[key]!
+    const gens = chain.map((g) => `    ${JSON.stringify(g)}`)
+    const comma = i < keys.length - 1 ? ',' : ''
+    parts.push(`  ${JSON.stringify(key)}: [`, gens.join(',\n'), `  ]${comma}`)
+  }
+  parts.push('}\n')
+  return parts.join('\n')
+}
+
 /** Find which lineage a model belongs to and its position. Returns null if not found. */
 export function findModelInFamilies(
   families: FamiliesMap,

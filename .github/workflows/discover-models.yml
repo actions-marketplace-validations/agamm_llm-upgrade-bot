@@ -57,10 +57,28 @@ jobs:
             - Date-stamped snapshots share inner array with alias
             - Dots for version separators (gpt-4.1 not gpt-4-1)
             - Never mix tiers (mini/nano/flagship = separate families)
+            - Different capabilities = different families (chat ≠ reasoning ≠ search ≠ deep-research)
             - Provider-prefixed IDs handled by derivation — don't add them
 
-            Classify directly if recognized, WebSearch if unfamiliar,
-            skip non-chat/reasoning LLMs. Edit families.json (compact JSON).
+            Classify directly only for obvious cases (dated snapshots of known models).
+            WebSearch when unsure whether models are same-capability tiers vs different products.
+            Models with different param sizes (8B vs 70B) or context sizes (32K vs 128K) are usually different families unless they share a tier name (e.g. llama-small groups 3B→8B→17B).
+            Edit families.json in place.
+
+            ## families.json format
+            One line per generation (inner array), indented under each key:
+            ```
+            {
+              "family-name": [
+                ["model-a","model-b"],
+                ["model-c"]
+              ],
+              "other-family": [
+                ["model-x"]
+              ]
+            }
+            ```
+            This gives readable git diffs per generation. Do NOT use single-line compact JSON.
 
             Then run:
             - `pnpm tsx scripts/derive-upgrades.ts`
