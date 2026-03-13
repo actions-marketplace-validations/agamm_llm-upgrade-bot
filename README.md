@@ -7,17 +7,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 
-Hardcoded `gpt-4`, `claude-3-opus`, or `gemini-2.5-pro`? This tool finds them and upgrades to the latest versions -- across **235+ model strings** from OpenAI, Anthropic, Google, xAI, Meta, Mistral, DeepSeek, Moonshot, Cohere, Qwen, MiniMax, and more.
+Hardcoded `gpt-4`, `claude-3-opus`, or `gemini-2.5-pro`? This tool finds them and upgrades to the latest versions -- across **720+ upgrade entries** from 50 model families spanning OpenAI, Anthropic, Google, xAI, Meta, Mistral, DeepSeek, Moonshot, Qwen, MiniMax, and more.
 
 ```
 $ llm-upgrade-bot ./src
 
-  src/api.ts:12  "gpt-4o-2024-05-13"
-    -> safe:  gpt-4o-2024-11-20
-    -> major: gpt-5.4
+  src/config.yaml:3  "claude-3-opus"
+    -> major: claude-opus-4.6
 
-  src/config.yaml:5  "claude-3-opus-20240229"
-    -> major: claude-opus-4-6
+  src/lib/router.ts:3  "gpt-3.5-turbo"
+    -> major: gpt-5-mini
 
   Found 2 upgradable models in 2 files
 ```
@@ -53,21 +52,24 @@ jobs:
 ## CLI usage
 
 ```bash
-npx llm-upgrade-bot ./your-project        # scan
-npx llm-upgrade-bot ./your-project --fix   # auto-fix
-npx llm-upgrade-bot ./your-project --json  # machine-readable
-npx llm-upgrade-bot . --extensions ".txt,.rst"  # add extra file types
-npx llm-upgrade-bot . --include "src/**"         # only scan matching files
+npx llm-upgrade-bot ./your-project          # scan
+npx llm-upgrade-bot ./your-project --fix     # auto-fix
+npx llm-upgrade-bot ./your-project --json    # machine-readable
+npx llm-upgrade-bot ./your-project --force   # include safe upgrades for date-pinned models
+npx llm-upgrade-bot . --extensions ".txt,.rst"   # add extra file types
+npx llm-upgrade-bot . --include "src/**"          # only scan matching files
 npx llm-upgrade-bot . --include "test/**,src/**"  # include test dirs (excluded by default)
 ```
 
-## How LLM Upgrade Bot works
+> **Date-pinned models** like `gpt-4o-2024-05-13` are treated as intentionally pinned. By default, only major upgrades are shown for them. Use `--force` to also see safe (same-generation) upgrades.
 
-We continuously scan model APIs (OpenAI, Anthropic, Google, DeepSeek, Together AI, Groq, and more) every hour to detect new models and automatically update our [upgrade map](data/upgrades.json). You don't need to supply any API keys -- we take care of keeping the model data fresh.
+## How it works
+
+We continuously scan 8 provider APIs (OpenAI, Anthropic, Google, DeepSeek, xAI, Together AI, Groq, and more) to detect new models and automatically classify them into [model families](data/families.json). You don't need to supply any API keys -- we take care of keeping the model data fresh.
 
 When the action runs in your repo, it:
 
-1. **Fetches** the latest upgrade map with 235+ model entries (always up-to-date)
+1. **Fetches** the latest upgrade map with 720+ entries (always up-to-date)
 2. **Scans** your files and matches model strings against it (including bare model names in `.md`/`.mdx` docs)
 3. **Classifies** each match as a **safe** upgrade (same family, newer version) and/or a **major** upgrade (latest in capability tier)
 4. **Fixes** files in-place, preferring safe upgrades
@@ -75,20 +77,22 @@ When the action runs in your repo, it:
 
 | Tier | Meaning | Example |
 |------|---------|---------|
-| safe | Same family, newer version | `gpt-4o-2024-05-13` -> `gpt-4o-2024-11-20` |
+| safe | Same generation, newer snapshot | `gpt-4o-2024-05-13` -> `gpt-4o` |
 | major | Latest model in capability tier | `gpt-4o` -> `gpt-5.4` |
 
 Test directories (`test/`, `tests/`, `__tests__/`, `spec/`, `fixtures/`, etc.) and test files (`*.test.ts`, `*_test.go`, `*Test.java`, etc.) are excluded by default. Use `--include "test/**"` to scan them.
 
+## Supported models
+
+50 model families across 14 provider groups -- OpenAI, Anthropic, Google, xAI (Grok), Meta (Llama), Mistral, DeepSeek, Moonshot (Kimi), Alibaba (Qwen), MiniMax, Aion -- including prefixed variants for OpenRouter, AWS Bedrock, LiteLLM, Together AI, and Groq.
+
+The scanner also handles `-latest` aliases (e.g. `mistral-large-latest`) and OpenRouter colon tags (`:free`, `:nitro`) by stripping them at scan time and re-appending to upgrade targets.
+
+See the full [model families](data/families.json) or [upgrade map](data/upgrades.json).
+
 ## Privacy
 
 **Your code never leaves your repo.** The tool runs entirely inside your GitHub Actions runner (or locally). The only network request is fetching the public [upgrade map](data/upgrades.json) — a static JSON file. No code is uploaded or shared. No API keys required. Works offline with the bundled fallback map.
-
-## Supported models
-
-OpenAI, Anthropic, Google, xAI (Grok), Meta (Llama), Mistral, DeepSeek, Moonshot (Kimi), Alibaba (Qwen), MiniMax -- including prefixed variants for OpenRouter, AWS Bedrock, LiteLLM, Together AI, and Groq.
-
-See the full [upgrade map](data/upgrades.json).
 
 ## Action inputs / outputs
 
@@ -106,6 +110,10 @@ See the full [upgrade map](data/upgrades.json).
 | `upgrades-found` | `true` / `false` |
 
 The action never creates duplicate PRs. Open or rejected PRs block new ones; merged PRs don't.
+
+## Status
+
+This project is a **work in progress**. Model families are auto-discovered and classified by AI, so mistakes can happen. If you spot a wrong upgrade suggestion, please [open an issue](https://github.com/agamm/llm-upgrade-bot/issues) -- and check [`data/families.json`](data/families.json) since that's the source of truth for all upgrade paths.
 
 ## Disclaimer
 
