@@ -82,4 +82,5 @@ TypeScript CLI + GitHub Action — scans codebases for outdated LLM model string
 - pnpm v10+ blocks postinstall scripts by default — use `pnpm.onlyBuiltDependencies`
 - tsup: watch `package.json` exports field for ESM/CJS dual output
 - `-latest` models (e.g. `mistral-small-latest`) are floating aliases — scanner strips the suffix at scan time, discovery prefilter skips them. Never add `-latest` entries to families.json.
+- Date-pinned models (e.g. `gpt-4o-2024-05-13`) are intentionally pinned — CLI suppresses safe upgrades for them by default. Use `--force` to show safe upgrades for pinned models. Major upgrades always show. If both safe and major are null after filtering, the match is dropped entirely.
 - `prefilter()` only strips structural noise (fine-tunes, colon-tagged, org-scoped, `-latest`) — resist adding content-based heuristics (embed, tts, etc.), let the AI judge relevance

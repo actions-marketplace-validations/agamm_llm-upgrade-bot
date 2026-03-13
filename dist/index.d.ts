@@ -65,6 +65,8 @@ declare function buildPrefixRegex(map: UpgradeMap): RegExp;
  */
 declare function fileMatchesPrefixFilter(content: string, prefixRegex: RegExp): boolean;
 
+/** True if model ID contains a date stamp (pinned intentionally). */
+declare function hasTimestamp(modelId: string): boolean;
 declare function scanFile(filePath: string, content: string, upgradeMap: UpgradeMap): ScanResult[];
 
 /** File extensions supported for scanning. */
@@ -124,4 +126,4 @@ declare const PREFIX_RULES: {
 /** Derive a complete UpgradeMap from families data. Pure, no I/O. */
 declare function deriveUpgradeMap(families: FamiliesMap): UpgradeMap;
 
-export { type FamiliesMap, type FamilyChain, type FileEdit, OPENROUTER_RULE, PREFIX_RULES, PROVIDER_CONFIGS, type ProviderConfig, type Result, SUPPORTED_EXTENSIONS, type ScanOptions, type ScanReport, type ScanResult, type UpgradeEntry, type UpgradeMap, type VariantRule, allModelsInFamilies, applyFixes, buildPrefixRegex, checkVariantConsistency, computeEdits, deriveUpgradeMap, diffModels, fetchAllProviderModels, fetchProviderModels, fileMatchesPrefixFilter, filterChatModels, findModelInFamilies, loadFamilies, loadUpgradeMap, lookupModel, scanDirectory, scanFile, validateUpgradeMap };
+export { type FamiliesMap, type FamilyChain, type FileEdit, OPENROUTER_RULE, PREFIX_RULES, PROVIDER_CONFIGS, type ProviderConfig, type Result, SUPPORTED_EXTENSIONS, type ScanOptions, type ScanReport, type ScanResult, type UpgradeEntry, type UpgradeMap, type VariantRule, allModelsInFamilies, applyFixes, buildPrefixRegex, checkVariantConsistency, computeEdits, deriveUpgradeMap, diffModels, fetchAllProviderModels, fetchProviderModels, fileMatchesPrefixFilter, filterChatModels, findModelInFamilies, hasTimestamp, loadFamilies, loadUpgradeMap, lookupModel, scanDirectory, scanFile, validateUpgradeMap };

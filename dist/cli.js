@@ -3664,6 +3664,10 @@ function fileMatchesPrefixFilter(content, prefixRegex) {
 }
 
 // src/core/scanner.ts
+var TIMESTAMP_PATTERN = /\d{4}-\d{2}-\d{2}|\d{8}/;
+function hasTimestamp(modelId) {
+  return TIMESTAMP_PATTERN.test(modelId);
+}
 var QUOTED_STRING_REGEX = /"([^"]+)"|'([^']+)'/g;
 var BACKTICK_REGEX = /`([^`]+)`/g;
 var BARE_TOKEN_REGEX = /[a-zA-Z][a-zA-Z0-9\-._/]+[a-zA-Z0-9]/g;
@@ -3678,13 +3682,18 @@ function matchToResult(match, filePath, lineOffsets, upgradeMap) {
   const modelId = match[1] ?? match[2];
   if (!modelId) return void 0;
   let entry = upgradeMap[modelId];
-  let colonTag = "";
+  let suffix = "";
   if (!entry) {
     const stripped = stripColonTag(modelId);
     if (stripped) {
       entry = upgradeMap[stripped.base];
-      if (entry) colonTag = stripped.tag;
+      if (entry) suffix = stripped.tag;
     }
+  }
+  if (!entry && modelId.endsWith("-latest")) {
+    const base = modelId.slice(0, -7);
+    entry = upgradeMap[base];
+    if (entry) suffix = "-latest";
   }
   if (!entry) return void 0;
   const { line, column } = resolvePosition(lineOffsets, match.index);
@@ -3693,8 +3702,8 @@ function matchToResult(match, filePath, lineOffsets, upgradeMap) {
     line,
     column,
     matchedText: modelId,
-    safeUpgrade: entry.safe ? entry.safe + colonTag : null,
-    majorUpgrade: entry.major ? entry.major + colonTag : null
+    safeUpgrade: entry.safe ? entry.safe + suffix : null,
+    majorUpgrade: entry.major ? entry.major + suffix : null
   };
 }
 function collectMatches(regex, content, filePath, lineOffsets, upgradeMap) {
@@ -4123,7 +4132,7 @@ var program2 = new Command();
 program2.name("llm-upgrade-bot").description(
   "Scan codebases for outdated LLM model strings and propose upgrades"
 ).version("0.1.0");
-program2.argument("[directory]", "directory to scan", ".").option("--fix", "auto-apply upgrades to files").option("--json", "output results as JSON").option("--pr-body", "output markdown PR body for upgrade matches").option("--extensions <exts>", 'extra file extensions to scan (comma-separated, e.g. ".txt,.cfg")').option("--include <globs>", 'only scan files matching these globs (comma-separated, e.g. "README.md,src/**")').action(async (directory, options) => {
+program2.argument("[directory]", "directory to scan", ".").option("--fix", "auto-apply upgrades to files").option("--json", "output results as JSON").option("--pr-body", "output markdown PR body for upgrade matches").option("--extensions <exts>", 'extra file extensions to scan (comma-separated, e.g. ".txt,.cfg")').option("--include <globs>", 'only scan files matching these globs (comma-separated, e.g. "README.md,src/**")').option("--force", "suggest safe upgrades even for date-pinned models").action(async (directory, options) => {
   const dir = resolve(directory);
   await runScan(dir, options);
 });
@@ -4150,6 +4159,11 @@ async function runScan(dir, options) {
   const includeGlobs = parseInclude(options.include);
   const start = performance.now();
   const report = await scanDirectory(dir, upgradeMap, { extraExtensions, includeGlobs });
+  if (!options.force) {
+    report.matches = report.matches.map(
+      (m) => hasTimestamp(m.matchedText) ? { ...m, safeUpgrade: null } : m
+    ).filter((m) => m.safeUpgrade !== null || m.majorUpgrade !== null);
+  }
   const durationMs = Math.round(performance.now() - start);
   if (options.json) {
     process.stdout.write(JSON.stringify(report, null, 2) + "\n");

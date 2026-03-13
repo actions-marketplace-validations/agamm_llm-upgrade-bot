@@ -36,6 +36,7 @@ __export(core_exports, {
   fileMatchesPrefixFilter: () => fileMatchesPrefixFilter,
   filterChatModels: () => filterChatModels,
   findModelInFamilies: () => findModelInFamilies,
+  hasTimestamp: () => hasTimestamp,
   loadFamilies: () => loadFamilies,
   loadUpgradeMap: () => loadUpgradeMap,
   lookupModel: () => lookupModel,
@@ -149,6 +150,10 @@ function fileMatchesPrefixFilter(content, prefixRegex) {
 }
 
 // src/core/scanner.ts
+var TIMESTAMP_PATTERN = /\d{4}-\d{2}-\d{2}|\d{8}/;
+function hasTimestamp(modelId) {
+  return TIMESTAMP_PATTERN.test(modelId);
+}
 var QUOTED_STRING_REGEX = /"([^"]+)"|'([^']+)'/g;
 var BACKTICK_REGEX = /`([^`]+)`/g;
 var BARE_TOKEN_REGEX = /[a-zA-Z][a-zA-Z0-9\-._/]+[a-zA-Z0-9]/g;
@@ -163,13 +168,18 @@ function matchToResult(match, filePath, lineOffsets, upgradeMap) {
   const modelId = match[1] ?? match[2];
   if (!modelId) return void 0;
   let entry = upgradeMap[modelId];
-  let colonTag = "";
+  let suffix = "";
   if (!entry) {
     const stripped = stripColonTag(modelId);
     if (stripped) {
       entry = upgradeMap[stripped.base];
-      if (entry) colonTag = stripped.tag;
+      if (entry) suffix = stripped.tag;
     }
+  }
+  if (!entry && modelId.endsWith("-latest")) {
+    const base = modelId.slice(0, -7);
+    entry = upgradeMap[base];
+    if (entry) suffix = "-latest";
   }
   if (!entry) return void 0;
   const { line, column } = resolvePosition(lineOffsets, match.index);
@@ -178,8 +188,8 @@ function matchToResult(match, filePath, lineOffsets, upgradeMap) {
     line,
     column,
     matchedText: modelId,
-    safeUpgrade: entry.safe ? entry.safe + colonTag : null,
-    majorUpgrade: entry.major ? entry.major + colonTag : null
+    safeUpgrade: entry.safe ? entry.safe + suffix : null,
+    majorUpgrade: entry.major ? entry.major + suffix : null
   };
 }
 function collectMatches(regex, content, filePath, lineOffsets, upgradeMap) {
@@ -863,6 +873,7 @@ function deriveUpgradeMap(families) {
   fileMatchesPrefixFilter,
   filterChatModels,
   findModelInFamilies,
+  hasTimestamp,
   loadFamilies,
   loadUpgradeMap,
   lookupModel,

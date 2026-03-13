@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { scanFile } from '../../src/core/scanner.js'
+import { scanFile, hasTimestamp } from '../../src/core/scanner.js'
 import type { UpgradeMap } from '../../src/core/types.js'
 import { loadRealMap } from '../helpers/load-map.js'
 
@@ -416,5 +416,27 @@ describe('scanFile with fixture files', () => {
     const results = scanFile('clean.ts', content, map)
 
     expect(results).toEqual([])
+  })
+})
+
+describe('hasTimestamp', () => {
+  it('detects YYYY-MM-DD date stamps', () => {
+    expect(hasTimestamp('gpt-4o-2024-05-13')).toBe(true)
+    expect(hasTimestamp('claude-sonnet-4-20250514')).toBe(true)
+  })
+
+  it('detects YYYYMMDD date stamps', () => {
+    expect(hasTimestamp('claude-3-opus-20240229')).toBe(true)
+  })
+
+  it('detects timestamps in prefixed models', () => {
+    expect(hasTimestamp('openai/gpt-4o-2024-08-06')).toBe(true)
+  })
+
+  it('returns false for alias models without timestamps', () => {
+    expect(hasTimestamp('gpt-4')).toBe(false)
+    expect(hasTimestamp('gpt-4o')).toBe(false)
+    expect(hasTimestamp('claude-opus-4.6')).toBe(false)
+    expect(hasTimestamp('gemini-2.5-pro')).toBe(false)
   })
 })

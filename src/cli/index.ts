@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { loadUpgradeMap } from '../core/upgrade-map.js'
 import { scanDirectory } from '../core/directory-scanner.js'
+import { hasTimestamp } from '../core/scanner.js'
 import { computeEdits, applyFixes } from '../core/fixer.js'
 import {
   formatScanReport,
@@ -27,7 +28,8 @@ program
   .option('--pr-body', 'output markdown PR body for upgrade matches')
   .option('--extensions <exts>', 'extra file extensions to scan (comma-separated, e.g. ".txt,.cfg")')
   .option('--include <globs>', 'only scan files matching these globs (comma-separated, e.g. "README.md,src/**")')
-  .action(async (directory: string, options: { fix?: boolean; json?: boolean; prBody?: boolean; extensions?: string; include?: string }) => {
+  .option('--force', 'suggest safe upgrades even for date-pinned models')
+  .action(async (directory: string, options: { fix?: boolean; json?: boolean; prBody?: boolean; extensions?: string; include?: string; force?: boolean }) => {
     const dir = resolve(directory)
     await runScan(dir, options)
   })
@@ -46,7 +48,7 @@ function parseInclude(raw?: string): string[] {
 
 async function runScan(
   dir: string,
-  options: { fix?: boolean; json?: boolean; prBody?: boolean; extensions?: string; include?: string },
+  options: { fix?: boolean; json?: boolean; prBody?: boolean; extensions?: string; include?: string; force?: boolean },
 ): Promise<void> {
   const mapResult = await loadUpgradeMap()
   if (!mapResult.ok) {
@@ -60,6 +62,14 @@ async function runScan(
   const includeGlobs = parseInclude(options.include)
   const start = performance.now()
   const report = await scanDirectory(dir, upgradeMap, { extraExtensions, includeGlobs })
+  // Suppress safe upgrades for date-pinned models unless --force
+  if (!options.force) {
+    report.matches = report.matches
+      .map((m) =>
+        hasTimestamp(m.matchedText) ? { ...m, safeUpgrade: null } : m,
+      )
+      .filter((m) => m.safeUpgrade !== null || m.majorUpgrade !== null)
+  }
   const durationMs = Math.round(performance.now() - start)
 
   if (options.json) {

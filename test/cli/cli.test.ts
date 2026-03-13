@@ -66,15 +66,22 @@ describe('CLI scan mode', () => {
   })
 
   it('shows safe and major upgrades where available', () => {
-    const { stdout } = runCli([FIXTURE_DIR], { expectFail: true })
+    // --force shows safe upgrades for date-pinned models
+    const { stdout } = runCli([FIXTURE_DIR, '--force'], { expectFail: true })
 
-    // gpt-4o-2024-05-13 has both safe and major — check arrows exist
     expect(stdout).toContain('safe:')
     expect(stdout).toContain('major:')
 
-    // Should show the matched model strings
     expect(stdout).toContain('gpt-4o-2024-05-13')
     expect(stdout).toContain('claude-3-opus-20240229')
+  })
+
+  it('suppresses safe upgrades for date-pinned models by default', () => {
+    const { stdout } = runCli([FIXTURE_DIR], { expectFail: true })
+
+    // Timestamped models still show (major upgrades), but no safe upgrades
+    expect(stdout).toContain('gpt-4o-2024-05-13')
+    expect(stdout).not.toContain('safe:')
   })
 
   it('shows file paths and line numbers', () => {

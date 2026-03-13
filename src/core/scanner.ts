@@ -1,5 +1,13 @@
 import type { UpgradeMap, ScanResult } from './types.js'
 
+/** Matches date-stamped model IDs: YYYY-MM-DD or YYYYMMDD patterns. */
+const TIMESTAMP_PATTERN = /\d{4}-\d{2}-\d{2}|\d{8}/
+
+/** True if model ID contains a date stamp (pinned intentionally). */
+export function hasTimestamp(modelId: string): boolean {
+  return TIMESTAMP_PATTERN.test(modelId)
+}
+
 /**
  * Regex to extract strings from source code.
  * Group 1: double-quoted strings  "model-id"
