@@ -167,7 +167,7 @@
     ["pixtral-large-2411"]
   ],
   "deepseek-chat": [
-    ["deepseek-coder","deepseek-chat"],
+    ["deepseek-chat"],
     ["deepseek-v3.2-exp","deepseek-v3.2"]
   ],
   "deepseek-reasoning": [

@@ -22,7 +22,7 @@ rule so future runs don't repeat the mistake.
 - Date-stamped snapshots share inner array with alias
 - Dots for version separators (gpt-4.1 not gpt-4-1)
 - Never mix tiers (mini/nano/flagship = separate families)
-- Different capabilities = different families (chat ≠ reasoning ≠ search ≠ vision ≠ deep-research)
+- Different capabilities = different families (chat ≠ reasoning ≠ search ≠ vision ≠ deep-research ≠ code-specialized)
 - Provider-prefixed IDs handled by derivation — don't add them
 
 ## Filtering rules

@@ -75,7 +75,7 @@ When the action runs in your repo, it:
 
 | Tier | Meaning | Example |
 |------|---------|---------|
-| safe | Same generation, newer version | `deepseek-coder` -> `deepseek-chat` |
+| safe | Same generation, newer version | `llama-3.1-70b-instruct` -> `llama-3.3-70b-instruct` |
 | major | Latest model in capability tier | `gpt-4o` -> `gpt-5.4` |
 
 Test directories (`test/`, `tests/`, `__tests__/`, `spec/`, `fixtures/`, etc.) and test files (`*.test.ts`, `*_test.go`, `*Test.java`, etc.) are excluded by default. Use `--include "test/**"` to scan them.
