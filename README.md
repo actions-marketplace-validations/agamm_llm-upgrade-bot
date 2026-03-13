@@ -75,7 +75,7 @@ When the action runs in your repo, it:
 
 | Tier | Meaning | Example |
 |------|---------|---------|
-| safe | Same generation, newer snapshot | `gpt-4o-2024-05-13` -> `gpt-4o` |
+| safe | Same generation, newer version | `deepseek-coder` -> `deepseek-chat` |
 | major | Latest model in capability tier | `gpt-4o` -> `gpt-5.4` |
 
 Test directories (`test/`, `tests/`, `__tests__/`, `spec/`, `fixtures/`, etc.) and test files (`*.test.ts`, `*_test.go`, `*Test.java`, etc.) are excluded by default. Use `--include "test/**"` to scan them.
@@ -90,7 +90,7 @@ See the full [model families](data/families.json) or [upgrade map](data/upgrades
 
 ## Privacy
 
-**Your code never leaves your repo.** The tool runs entirely inside your GitHub Actions runner (or locally). The only network request is fetching the public [upgrade map](data/upgrades.json) — a static JSON file. No code is uploaded or shared. No API keys required. Works offline with the bundled fallback map.
+**100% open source. Your code never leaves your repo.** The tool is designed to run inside your own GitHub Actions runner or locally as a CLI. The only network request is fetching the public [upgrade map](data/upgrades.json) — a static JSON file. No code is uploaded or shared. No API keys required. Works offline with the bundled fallback map.
 
 ## Action inputs / outputs
 
@@ -108,6 +108,14 @@ See the full [model families](data/families.json) or [upgrade map](data/upgrades
 | `upgrades-found` | `true` / `false` |
 
 The action never creates duplicate PRs. Open or rejected PRs block new ones; merged PRs don't.
+
+## Install with your AI coding agent
+
+Copy this prompt into Claude Code, Codex, or your preferred AI coding agent:
+
+```
+Read https://github.com/agamm/llm-upgrade-bot#quick-start--github-action and set up llm-upgrade-bot in this repo. Create the GitHub Actions workflow file and enable the required permissions.
+```
 
 ## Status
 
